@@ -19,8 +19,12 @@
 #include "LinAlgOps.h"
 #include <string>
 
+#include <cstdint> 
+#include <e5d_Shape.h>
+
 #define NOMINMAX
 #include "windows.h"
+
 
 
 #define RVMPARSER_GLTF_PRETTY_PRINT (0)
@@ -28,10 +32,6 @@
 namespace rj = rapidjson;
 
 namespace ExportNamedPipe{
-
-#include <cstdint> 
-#include <string> 
-#include <vector> 
 
     // 强制 1 字节对齐，消除填充 
 #pragma pack(push, 1) 
@@ -60,7 +60,7 @@ namespace ExportNamedPipe{
     // ShapeData 结构体 
     struct ShapeData {
         int64_t Id;
-        int64_t ParentId;
+        int64_t InstanceId;
         double Min[3];
         double Max[3];
         std::vector<uint8_t> Geometry;
@@ -298,7 +298,7 @@ namespace ExportNamedPipe{
   }
 
 
-  void SendInstance(Context& ctx, HANDLE hPipe, const char* instName, const int64_t& parentId, int64_t& nodeId)
+  void SendInstance(Context& ctx, HANDLE hPipe, const char* instName,const std::vector<double> & matrix, const int64_t& parentId, int64_t& nodeId)
   {
       const char* utf8Data = nullptr;
       int utf8Len = 0;
@@ -347,6 +347,113 @@ namespace ExportNamedPipe{
       }
   }
 
+  bool Shape2Binary(std::shared_ptr< e5d_Shape>& shape, std::string& binary)
+  {
+
+      std::ostringstream outStream;
+
+      cereal::PortableBinaryOutputArchive archive(outStream);
+
+      archive(shape);
+
+      binary = outStream.str();
+
+      return true;
+  }
+
+  bool SendShape(Context& ctx, HANDLE hPipe, Geometry* geo, const int64_t& instanceId)
+  {
+      std::shared_ptr< e5d_Shape> shape = nullptr;
+      switch (geo->kind) {
+
+      case Geometry::Kind::Pyramid:
+          break;
+      case Geometry::Kind::Box:
+
+      {
+          std::shared_ptr<e5dFace_Box> subshape = std::make_shared<e5dFace_Box>();
+          subshape->dX = geo->box.lengths[0];
+          subshape->dY = geo->box.lengths[1];
+          subshape->dZ = geo->box.lengths[2];
+
+          shape = subshape;
+
+      }
+          break;
+      case Geometry::Kind::RectangularTorus:
+          break;
+      case Geometry::Kind::Sphere:
+      {
+          std::shared_ptr<e5dFace_Sphere3d> subshape = std::make_shared<e5dFace_Sphere3d>();
+          subshape->radius = geo->sphere.diameter / 2.0;
+
+          shape = subshape;
+
+      }
+          break;
+      case Geometry::Kind::Line:
+          break;
+      case Geometry::Kind::FacetGroup:
+
+          break;
+
+      case Geometry::Kind::Snout:
+          break;
+      case Geometry::Kind::EllipticalDish:
+          break;
+      case Geometry::Kind::SphericalDish:
+          break;
+      case Geometry::Kind::Cylinder:
+
+      {
+          std::shared_ptr<e5dFace_Cylinder> subshape = std::make_shared<e5dFace_Cylinder>();
+          subshape->radius = geo->cylinder.radius;
+          subshape->hight = geo->cylinder.height;
+
+          shape = subshape;
+
+      }
+          break;
+
+      case Geometry::Kind::CircularTorus:
+
+          break;
+
+      default:
+          assert(false && "Illegal kind");
+          break;
+      }
+
+      if (shape == nullptr)
+          return false;
+
+      std::string binstr;
+
+      Shape2Binary(shape, binstr);
+
+
+      CustomMessageHeader pMsg;
+      pMsg.msgType = 3;
+      pMsg.contentLength = sizeof(int64_t) + sizeof(int64_t) + sizeof(double) * 6 + binstr.length();
+
+      double Min[3] = { geo->bboxLocal.min.x,geo->bboxLocal.min.y,geo->bboxLocal.min.z };
+      double Max[3] = { geo->bboxLocal.max.x,geo->bboxLocal.max.y,geo->bboxLocal.max.z };
+      std::vector<uint8_t> Geometry;
+
+      auto shapeId = ++ShapeId;
+
+      // 发送完整数据块
+      DWORD bytesWritten;
+      WriteFile(hPipe, &pMsg, sizeof(CustomMessageHeader), &bytesWritten, NULL);
+      WriteFile(hPipe, &shapeId, sizeof(int64_t), &bytesWritten, NULL);
+      WriteFile(hPipe, &instanceId, sizeof(int64_t), &bytesWritten, NULL);
+      WriteFile(hPipe, Min, sizeof(Min), &bytesWritten, NULL);
+      WriteFile(hPipe, Max, sizeof(Max), &bytesWritten, NULL);
+      WriteFile(hPipe, binstr.data(), binstr.length(), &bytesWritten, NULL);
+
+      return true;
+  }
+
   bool ReadWaiting(Context& ctx, HANDLE hPipe)
   {
       // 3. 通信循环 
@@ -373,6 +480,7 @@ namespace ExportNamedPipe{
   {
 
       int64_t nodeId = 0;
+      std::vector<double> matrix;
 
     switch (node->kind) {
     case Node::Kind::File:
@@ -389,7 +497,7 @@ namespace ExportNamedPipe{
       break;
 
     case Node::Kind::Model:
-        SendInstance(ctx,hPipe, node->model.name, parentId, nodeId);
+        SendInstance(ctx,hPipe, node->model.name, matrix, parentId, nodeId);
         ReadWaiting(ctx, hPipe);
       //if (includeContent) {
       //  addAttributes(ctx, model, rjNode, node);
@@ -397,8 +505,29 @@ namespace ExportNamedPipe{
       break;
 
     case Node::Kind::Group:
+        if (node->group.translation[0] != 0 || node->group.translation[1] != 0 || node->group.translation[2] != 0)
+        {
+            matrix.push_back(1.0);
+            matrix.push_back(0.0);
+            matrix.push_back(0.0);
+            matrix.push_back(node->group.translation[0]);
 
-        SendInstance(ctx,hPipe, node->group.name, parentId, nodeId);
+            matrix.push_back(0.0);
+            matrix.push_back(1.0);
+            matrix.push_back(0.0);
+            matrix.push_back(node->group.translation[1]);
+
+            matrix.push_back(0.0);
+            matrix.push_back(0.0);
+            matrix.push_back(1.0);
+            matrix.push_back(node->group.translation[2]);
+
+            matrix.push_back(0.0);
+            matrix.push_back(0.0);
+            matrix.push_back(0.0);
+            matrix.push_back(1.0);
+        }
+        SendInstance(ctx,hPipe, node->group.name, matrix, parentId, nodeId);
         ReadWaiting(ctx, hPipe);
 
       //if (includeContent) 
@@ -410,7 +539,10 @@ namespace ExportNamedPipe{
 
           for (Geometry* geo = node->group.geometries.first; geo; geo = geo->next) {
 
-
+              if (SendShape(ctx, hPipe, geo, nodeId))
+              {
+                  ReadWaiting(ctx, hPipe);
+              }
 
           }
 
