@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <cstddef>
+#include <string>
 
 class Store;
 
@@ -112,3 +113,6 @@ bool exportJson(Store* store, Logger logger, const char* path);
 bool discardGroups(Store* store, Logger logger, const void* ptr, size_t size);
 bool exportRev(Store* store, Logger logger, const char* path);
 bool exportGLTF(Store* store, Logger logger, const char* path, size_t splitLevel, bool rotateZToY, bool centerModel, bool includeAttributes, bool mergeGeometries);
+
+
+bool exportNamedPipe(Store* store, Logger logger, const std::string& pipename);

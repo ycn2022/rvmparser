@@ -206,7 +206,7 @@ Post bug reports or questions at https://github.com/cdyk/rvmparser
 
 }
 
-
+/*
 int main(int argc, char** argv)
 {
   int rv = 0;
@@ -571,3 +571,196 @@ int main(int argc, char** argv)
   return rv;
 }
 
+*/
+
+
+int main(int argc, char** argv)
+{
+  int rv = 0;
+
+  bool should_colorize = true;
+  std::string color_attribute;
+
+  std::string filename;
+
+  std::string pipename;
+
+  Store* store = new Store();
+
+  for (int i = 1; i < argc; i++) {
+      auto arg = std::string(argv[i]);
+
+      if (arg.substr(0, 2) == "--") {
+
+          if (arg == "--help") {
+              printHelp(argv[0]);
+              return 0;
+          }
+          else if (arg == "--group-bounding-boxes") {
+
+              continue;
+          }
+
+          auto e = arg.find('=');
+          if (e != std::string::npos) {
+              auto key = arg.substr(0, e);
+              auto val = arg.substr(e + 1);
+              if (key == "--guid")
+              {
+                  pipename = val;
+              }
+              else if (key == "--keep-groups") {
+
+                  continue;
+              }
+              else if (key == "--keep-regex") {
+
+                  continue;
+              }
+              else if (key == "--discard-groups") {
+
+                  continue;
+              }
+              else  if (key == "--output-json") {
+
+                  continue;
+              }
+              else if (key == "--output-txt") {
+
+                  continue;
+              }
+              else if (key == "--output-rev") {
+
+                  continue;
+              }
+              else if (key == "--output-obj") {
+
+                  continue;
+              }
+              else if (key == "--output-gltf") {
+
+                  continue;
+              }
+              else if (key == "--output-gltf-rotate-z-to-y") {
+
+                  continue;
+              }
+              else if (key == "--output-gltf-center") {
+
+                  continue;
+              }
+              else if (key == "--output-gltf-attributes") {
+
+                  continue;
+              }
+              else if (key == "--output-gltf-merge-geos") {
+
+                  continue;
+              }
+              else if (key == "--output-gltf-split-level") {
+
+                  continue;
+              }
+              else if (key == "--color-attribute") {
+                  color_attribute = val;
+                  continue;
+              }
+              else if (key == "--tolerance") {
+
+                  continue;
+              }
+              else if (key == "--cull-scale") {
+
+                  continue;
+              }
+              else if (key == "--chunk-tiny") {
+
+                  continue;
+              }
+          }
+
+          continue;
+      }
+
+      auto arg_lc = arg;
+      filename = arg;
+      for (auto& c : arg_lc) c = static_cast<char>(std::tolower(c));
+
+      // parse rvm file
+      if (arg_lc.rfind(".rvm") != std::string::npos) {
+          if (processFile(arg, [store, arg](const void* ptr, size_t size) { return parseRVM(store, logger, arg.c_str(), ptr, size); }))
+          {
+              fprintf(stderr, "Successfully parsed %s\n", arg.c_str());
+          }
+          else {
+              fprintf(stderr, "Failed to parse %s: %s\n", arg.c_str(), store->errorString());
+              rv = -1;
+              break;
+          }
+          continue;
+      }
+
+      // parse attributes file
+      if (arg_lc.rfind(".txt") != std::string::npos || arg_lc.rfind(".att")) {
+          if (processFile(arg, [store](const void* ptr, size_t size) { return parseAtt(store, logger, ptr, size); })) {
+              fprintf(stderr, "Successfully parsed %s\n", arg.c_str());
+          }
+          else {
+              fprintf(stderr, "Failed to parse %s\n", arg.c_str());
+              rv = -1;
+              break;
+          }
+          continue;
+      }
+  }
+
+  if ((rv == 0) && should_colorize) {
+    Colorizer colorizer(logger, color_attribute.empty() ? nullptr : color_attribute.c_str());
+    store->apply(&colorizer);
+  }
+
+  if (rv == 0) {
+    connect(store, logger);
+    align(store, logger);
+  }
+
+  auto time0 = std::chrono::high_resolution_clock::now();
+  if (exportNamedPipe(store, logger, pipename))
+  {
+      long long e = std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+      logger(0, "Exported  in %lldms", e);
+  }
+  else {
+      logger(2, "Failed to export  into ");
+      rv = -1;
+  }
+
+  AddStats addStats;
+  store->apply(&addStats);
+  auto * stats = store->stats;
+  if (stats) {
+    logger(0, "Stats:");
+    logger(0, "    Groups                 %d", stats->group_n);
+    logger(0, "    Geometries             %d (grp avg=%.1f)", stats->geometry_n, stats->geometry_n / float(stats->group_n));
+    logger(0, "        Pyramids           %d", stats->pyramid_n);
+    logger(0, "        Boxes              %d", stats->box_n);
+    logger(0, "        Rectangular tori   %d", stats->rectangular_torus_n);
+    logger(0, "        Circular tori      %d", stats->circular_torus_n);
+    logger(0, "        Elliptical dish    %d", stats->elliptical_dish_n);
+    logger(0, "        Spherical dish     %d", stats->spherical_dish_n);
+    logger(0, "        Snouts             %d", stats->snout_n);
+    logger(0, "        Cylinders          %d", stats->cylinder_n);
+    logger(0, "        Spheres            %d", stats->sphere_n);
+    logger(0, "        Facet groups       %d", stats->facetgroup_n);
+    logger(0, "            triangles      %d", stats->facetgroup_triangles_n);
+    logger(0, "            quads          %d", stats->facetgroup_quads_n);
+    logger(0, "            polygons       %d (fgrp avg=%.1f)", stats->facetgroup_polygon_n, (stats->facetgroup_polygon_n / float(stats->facetgroup_n)));
+    logger(0, "                contours   %d (poly avg=%.1f)", stats->facetgroup_polygon_n_contours_n, (stats->facetgroup_polygon_n_contours_n / float(stats->facetgroup_polygon_n)));
+    logger(0, "                vertices   %d (cont avg=%.1f)", stats->facetgroup_polygon_n_vertices_n, (stats->facetgroup_polygon_n_vertices_n / float(stats->facetgroup_polygon_n_contours_n)));
+    logger(0, "        Lines              %d", stats->line_n);
+  }
+
+  delete store;
+
+  return rv;
+}
