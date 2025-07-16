@@ -46,6 +46,8 @@ namespace ExportNamedPipe{
     // ModelData 结构体 
     struct ModelData {
         int64_t Id;
+        double Min[3];
+        double Max[3];
         std::string Name;
     };
 
@@ -54,6 +56,8 @@ namespace ExportNamedPipe{
         int64_t Id;
         int64_t ParentId;
         bool IsSignificant;
+        double Min[3];
+        double Max[3];
         std::string Name;
     };
 
@@ -61,19 +65,45 @@ namespace ExportNamedPipe{
     struct ShapeData {
         int64_t Id;
         int64_t InstanceId;
-        double Min[3];
-        double Max[3];
-        std::vector<uint8_t> Geometry;
+        int64_t MaterialId;
+        double LocalMin[3];
+        double LocalMax[3];
+        double WorldMin[3];
+        double WorldMax[3];
+        double Matrix[12];
+        std::string Geometry;
 
-        // 默认构造函数 
-        ShapeData() : Geometry() {}
+    };
+
+    struct MaterialData
+    {
+        int64_t Id;
+        int Diffuse[3];
+        float Dissolve; // 1= 全透明
+        float Roughness;
+        float Metallic;
+        int Diffuse_texname_len;
+        int Alpha_texname_len;
+        int Normal_texname_len;
+        int Metallic_texname_len;
+        int Roughness_texname_len;
+        std::string Diffuse_texname;
+        std::string Alpha_texname;
+        std::string Normal_texname;
+        std::string Metallic_texname;
+        std::string Roughness_texname;
     };
 
     // 恢复默认的字节对齐 
 #pragma pack(pop) 
 
+    int PipeDataVersion = 1;
+
     int64_t InstanceId = 0;
     int64_t ShapeId = 0;
+    int64_t MaterialId = 0;
+
+    Map definedMaterials;
 
   struct DataItem
   {
@@ -82,26 +112,7 @@ namespace ExportNamedPipe{
     uint32_t size = 0;
   };
 
-  // Temporary state gathered prior to writing a GLTF file
-  struct Model
-  {
-    rj::MemoryPoolAllocator<rj::CrtAllocator> rjAlloc = rj::MemoryPoolAllocator<rj::CrtAllocator>();
 
-    rj::Value rjNodes = rj::Value(rj::kArrayType);
-    rj::Value rjMeshes = rj::Value(rj::kArrayType);
-    rj::Value rjAccessors = rj::Value(rj::kArrayType);
-    rj::Value rjBufferViews = rj::Value(rj::kArrayType);
-    rj::Value rjMaterials = rj::Value(rj::kArrayType);
-    rj::Value rjBuffers = rj::Value(rj::kArrayType);
-
-    uint32_t dataBytes = 0;
-    ListHeader<DataItem> dataItems{};
-    Arena arena;
-
-    Map definedMaterials;
-
-    Vec3f origin = makeVec3f(0.f);
-  };
 
   struct GeometryItem
   {
@@ -179,27 +190,27 @@ namespace ExportNamedPipe{
       return result;
   }
 
-  uint32_t addDataItem(Context& /*ctx*/, Model& model, const void* ptr, size_t size, bool copy)
-  {
-    assert((size % 4) == 0);
-    assert(model.dataBytes + size <= std::numeric_limits<uint32_t>::max());
+  //uint32_t addDataItem(Context& /*ctx*/, Model& model, const void* ptr, size_t size, bool copy)
+  //{
+  //  assert((size % 4) == 0);
+  //  assert(model.dataBytes + size <= std::numeric_limits<uint32_t>::max());
 
-    if (copy) {
-      void* copied_ptr = model.arena.alloc(size);
-      std::memcpy(copied_ptr, ptr, size);
-      ptr = copied_ptr;
-    }
+  //  if (copy) {
+  //    void* copied_ptr = model.arena.alloc(size);
+  //    std::memcpy(copied_ptr, ptr, size);
+  //    ptr = copied_ptr;
+  //  }
 
-    DataItem* item = model.arena.alloc<DataItem>();
-    model.dataItems.insert(item);
-    item->ptr = ptr;
-    item->size = static_cast<uint32_t>(size);
+  //  DataItem* item = model.arena.alloc<DataItem>();
+  //  model.dataItems.insert(item);
+  //  item->ptr = ptr;
+  //  item->size = static_cast<uint32_t>(size);
 
-    uint32_t offset = model.dataBytes;
-    model.dataBytes += item->size;
+  //  uint32_t offset = model.dataBytes;
+  //  model.dataBytes += item->size;
 
-    return offset;
-  }
+  //  return offset;
+  //}
 
   void encodeBase64(Context& ctx, const uint8_t* data, size_t byteLength)
   {
@@ -255,7 +266,9 @@ namespace ExportNamedPipe{
     }
   }
 
-  void SendModel(Context& ctx, HANDLE hPipe, const char* modelname,int64_t & nodeId)
+
+
+  void SendModel(Context& ctx, HANDLE hPipe, const Node* node, const char* modelname,int64_t & nodeId)
   {
       const char* utf8Data = nullptr;
       int utf8Len = 0;
@@ -279,8 +292,11 @@ namespace ExportNamedPipe{
 
       CustomMessageHeader pMsg;
       pMsg.msgType = 1;
-      pMsg.contentLength = sizeof(int64_t) + utf8Len;
+      pMsg.contentLength = sizeof(int64_t) + sizeof(double) * 6 + utf8Len;
 
+
+      double worldMin[3] = { node->bboxWorld.min.x,node->bboxWorld.min.y,node->bboxWorld.min.z };
+      double worldMax[3] = { node->bboxWorld.max.x,node->bboxWorld.max.y,node->bboxWorld.max.z };
 
       nodeId = ++InstanceId;
 
@@ -288,6 +304,8 @@ namespace ExportNamedPipe{
       DWORD bytesWritten;
       WriteFile(hPipe, &pMsg, sizeof(CustomMessageHeader), &bytesWritten, NULL);
       WriteFile(hPipe, &nodeId, sizeof(int64_t), &bytesWritten, NULL);
+      WriteFile(hPipe, worldMin, sizeof(worldMin), &bytesWritten, NULL);
+      WriteFile(hPipe, worldMax, sizeof(worldMax), &bytesWritten, NULL);
       WriteFile(hPipe, utf8Data, utf8Len, &bytesWritten, NULL);
 
 
@@ -298,7 +316,7 @@ namespace ExportNamedPipe{
   }
 
 
-  void SendInstance(Context& ctx, HANDLE hPipe, const char* instName,const std::vector<double> & matrix, const int64_t& parentId, int64_t& nodeId)
+  void SendInstance(Context& ctx, HANDLE hPipe, const Node* node, const char* instName,const std::vector<double> & matrix, const int64_t& parentId, int64_t& nodeId)
   {
       const char* utf8Data = nullptr;
       int utf8Len = 0;
@@ -327,8 +345,10 @@ namespace ExportNamedPipe{
 
       CustomMessageHeader pMsg;
       pMsg.msgType = 2;
-      pMsg.contentLength = sizeof(int64_t) + sizeof(int64_t) + sizeof(bool) + utf8Len;
+      pMsg.contentLength = sizeof(int64_t) + sizeof(int64_t) + sizeof(bool) + sizeof(double) * 6 + utf8Len;
 
+      double worldMin[3] = { node->bboxWorld.min.x,node->bboxWorld.min.y,node->bboxWorld.min.z };
+      double worldMax[3] = { node->bboxWorld.max.x,node->bboxWorld.max.y,node->bboxWorld.max.z };
 
       nodeId = ++InstanceId;
 
@@ -338,6 +358,8 @@ namespace ExportNamedPipe{
       WriteFile(hPipe, &nodeId, sizeof(int64_t), &bytesWritten, NULL);
       WriteFile(hPipe, &parentId, sizeof(int64_t), &bytesWritten, NULL);
       WriteFile(hPipe, &isSignificant, sizeof(bool), &bytesWritten, NULL);
+      WriteFile(hPipe, worldMin, sizeof(worldMin), &bytesWritten, NULL);
+      WriteFile(hPipe, worldMax, sizeof(worldMax), &bytesWritten, NULL);
       WriteFile(hPipe, utf8Data, utf8Len, &bytesWritten, NULL);
 
 
@@ -361,8 +383,120 @@ namespace ExportNamedPipe{
       return true;
   }
 
+
+  int64_t createOrGetColor(Context& /*ctx*/, const Geometry* geo, bool& created)
+  {
+      uint32_t color = geo->color;
+      uint8_t transparency = static_cast<uint8_t>(geo->transparency);
+      // make sure key is never zero
+      uint64_t key = (uint64_t(color) << 9) | (uint64_t(transparency) << 1) | 1;
+      if (uint64_t val; definedMaterials.get(val, key)) {
+          return uint32_t(val);
+      }
+
+      created = true;
+
+      int64_t matId = ++MaterialId;
+
+      definedMaterials.insert(key, matId);
+
+      return matId;
+  }
+
+  bool SendMaterial(Context& ctx, HANDLE hPipe, Geometry* geo, int64_t& matId)
+  {
+      bool created = false;
+      matId = createOrGetColor(ctx, geo, created);
+
+      if (created)
+      {
+
+          int t = ((geo->color >> 24) & 0xFF);
+
+
+          int r = ((geo->color >> 16) & 0xFF);
+          int g = ((geo->color >> 8) & 0xFF);
+          int b = ((geo->color) & 0xFF);
+
+          uint8_t transparency = static_cast<uint8_t>(geo->transparency);
+
+          float dissolve = transparency / 100.f;// 1 - std::min(1.f, std::max(0.f, 1.f - (1.f / 100.f) * transparency));
+
+
+          CustomMessageHeader pMsg;
+          pMsg.msgType = 4;
+          pMsg.contentLength = sizeof(int64_t) + sizeof(int) * 3 + sizeof(float) * 3 + sizeof(int) * 5;
+
+          MaterialData matData;
+          matData.Id = matId;
+          matData.Diffuse[0] = r;
+          matData.Diffuse[1] = g;
+          matData.Diffuse[2] = b;
+          matData.Dissolve = dissolve;
+          matData.Roughness = 0.4f;
+          matData.Metallic = 0.6f;
+          matData.Diffuse_texname_len = 0;
+          matData.Alpha_texname_len = 0;
+          matData.Normal_texname_len = 0;
+          matData.Metallic_texname_len = 0;
+          matData.Roughness_texname_len = 0;
+
+          // 发送完整数据块
+          DWORD bytesWritten;
+          WriteFile(hPipe, &pMsg, sizeof(CustomMessageHeader), &bytesWritten, NULL);
+          WriteFile(hPipe, &matData.Id, sizeof(int64_t), &bytesWritten, NULL);
+          WriteFile(hPipe, &matData.Diffuse, sizeof(int) * 3, &bytesWritten, NULL);
+          WriteFile(hPipe, &matData.Dissolve, sizeof(float), &bytesWritten, NULL);
+          WriteFile(hPipe, &matData.Roughness, sizeof(float), &bytesWritten, NULL);
+          WriteFile(hPipe, &matData.Metallic, sizeof(float), &bytesWritten, NULL);
+          WriteFile(hPipe, &matData.Diffuse_texname_len, sizeof(int), &bytesWritten, NULL);
+          WriteFile(hPipe, &matData.Alpha_texname_len, sizeof(int), &bytesWritten, NULL);
+          WriteFile(hPipe, &matData.Normal_texname_len, sizeof(int), &bytesWritten, NULL);
+          WriteFile(hPipe, &matData.Metallic_texname_len, sizeof(int), &bytesWritten, NULL);
+          WriteFile(hPipe, &matData.Roughness_texname_len, sizeof(int), &bytesWritten, NULL);
+
+
+          return true;
+      }
+      else
+      {
+          return false;
+      }
+  }
+
+  bool ReadWaiting(Context& ctx, HANDLE hPipe)
+  {
+      // 3. 通信循环 
+      DWORD bytesRead;
+      CustomMessageHeader header;
+      BOOL success = ReadFile(hPipe, &header, sizeof(header), &bytesRead, NULL);
+
+      if (!success) {
+          DWORD err = GetLastError();
+          if (err == ERROR_BROKEN_PIPE || err == ERROR_NO_DATA) {
+              // 客户端已断开 [3]()
+
+              ctx.logger(2, "已断开...");
+          }
+          return false;
+      }
+
+      if (header.msgType == 888)
+          return true;
+      return false;
+  }
+
+
+
   bool SendShape(Context& ctx, HANDLE hPipe, Geometry* geo, const int64_t& instanceId)
   {
+
+      int64_t  matId = 0;
+      if (SendMaterial(ctx, hPipe, geo, matId))
+      {
+          ReadWaiting(ctx, hPipe);
+      }
+
       std::shared_ptr< e5d_Shape> shape = nullptr;
       switch (geo->kind) {
 
@@ -434,46 +568,66 @@ namespace ExportNamedPipe{
 
       CustomMessageHeader pMsg;
       pMsg.msgType = 3;
-      pMsg.contentLength = sizeof(int64_t) + sizeof(int64_t) + sizeof(double) * 6 + binstr.length();
+      pMsg.contentLength = sizeof(int64_t) + sizeof(int64_t) + sizeof(int64_t) + sizeof(double) * 24 + binstr.length();
 
-      double Min[3] = { geo->bboxLocal.min.x,geo->bboxLocal.min.y,geo->bboxLocal.min.z };
-      double Max[3] = { geo->bboxLocal.max.x,geo->bboxLocal.max.y,geo->bboxLocal.max.z };
-      std::vector<uint8_t> Geometry;
+      double localMin[3] = { geo->bboxLocal.min.x,geo->bboxLocal.min.y,geo->bboxLocal.min.z };
+      double localMax[3] = { geo->bboxLocal.max.x,geo->bboxLocal.max.y,geo->bboxLocal.max.z };
+      double worldMin[3] = { geo->bboxWorld.min.x,geo->bboxWorld.min.y,geo->bboxWorld.min.z };
+      double worldMax[3] = { geo->bboxWorld.max.x,geo->bboxWorld.max.y,geo->bboxWorld.max.z };
+
+      double Matrix[12] = {
+        geo->M_3x4.m00,
+        geo->M_3x4.m01,
+         geo->M_3x4.m02,
+         geo->M_3x4.m03,
+         geo->M_3x4.m10,
+         geo->M_3x4.m11,
+         geo->M_3x4.m12,
+         geo->M_3x4.m13,
+         geo->M_3x4.m20,
+         geo->M_3x4.m21,
+         geo->M_3x4.m22,
+         geo->M_3x4.m23
+      };
+
+      //std::vector<uint8_t> Geometry;
 
       auto shapeId = ++ShapeId;
+
 
       // 发送完整数据块
       DWORD bytesWritten;
       WriteFile(hPipe, &pMsg, sizeof(CustomMessageHeader), &bytesWritten, NULL);
       WriteFile(hPipe, &shapeId, sizeof(int64_t), &bytesWritten, NULL);
       WriteFile(hPipe, &instanceId, sizeof(int64_t), &bytesWritten, NULL);
-      WriteFile(hPipe, Min, sizeof(Min), &bytesWritten, NULL);
-      WriteFile(hPipe, Max, sizeof(Max), &bytesWritten, NULL);
+      WriteFile(hPipe, &matId, sizeof(int64_t), &bytesWritten, NULL);
+      WriteFile(hPipe, localMin, sizeof(localMin), &bytesWritten, NULL);
+      WriteFile(hPipe, localMax, sizeof(localMax), &bytesWritten, NULL);
+      WriteFile(hPipe, worldMin, sizeof(worldMin), &bytesWritten, NULL);
+      WriteFile(hPipe, worldMax, sizeof(worldMax), &bytesWritten, NULL);
+      WriteFile(hPipe, Matrix, sizeof(Matrix), &bytesWritten, NULL);
       WriteFile(hPipe, binstr.data(), binstr.length(), &bytesWritten, NULL);
+
+
+
 
       return true;
   }
 
-  bool ReadWaiting(Context& ctx, HANDLE hPipe)
+
+  void SendPipeDataVersion(Context& ctx, HANDLE hPipe)
   {
-      // 3. 通信循环 
-      DWORD bytesRead;
-      CustomMessageHeader header;
-      BOOL success = ReadFile(hPipe, &header, sizeof(header), &bytesRead, NULL);
 
-      if (!success) {
-          DWORD err = GetLastError();
-          if (err == ERROR_BROKEN_PIPE || err == ERROR_NO_DATA) {
-              // 客户端已断开 [3]()
+      CustomMessageHeader pMsg;
+      pMsg.msgType = 100;
+      pMsg.contentLength = PipeDataVersion;
 
-              ctx.logger(2, "已断开...");
-          }
-          return false;
-      }
 
-      if (header.msgType == 888)
-          return true;
-      return false;
+      // 发送完整数据块
+      DWORD bytesWritten;
+      WriteFile(hPipe, &pMsg, sizeof(CustomMessageHeader), &bytesWritten, NULL);
+
+
   }
 
   void processNode(Context& ctx, HANDLE hPipe, const Node* node, size_t level,const int64_t& parentId)
@@ -489,7 +643,7 @@ namespace ExportNamedPipe{
           //
 
       }
-      SendModel(ctx,hPipe, node->file.path, nodeId);
+      SendModel(ctx, hPipe, node, node->file.path, nodeId);
       ReadWaiting(ctx, hPipe);
       //if (includeContent) {
       //  addAttributes(ctx, model, rjNode, node);
@@ -497,7 +651,7 @@ namespace ExportNamedPipe{
       break;
 
     case Node::Kind::Model:
-        SendInstance(ctx,hPipe, node->model.name, matrix, parentId, nodeId);
+        SendInstance(ctx, hPipe, node, node->model.name, matrix, parentId, nodeId);
         ReadWaiting(ctx, hPipe);
       //if (includeContent) {
       //  addAttributes(ctx, model, rjNode, node);
@@ -505,29 +659,29 @@ namespace ExportNamedPipe{
       break;
 
     case Node::Kind::Group:
-        if (node->group.translation[0] != 0 || node->group.translation[1] != 0 || node->group.translation[2] != 0)
-        {
-            matrix.push_back(1.0);
-            matrix.push_back(0.0);
-            matrix.push_back(0.0);
-            matrix.push_back(node->group.translation[0]);
+        //if (node->group.translation[0] != 0 || node->group.translation[1] != 0 || node->group.translation[2] != 0)
+        //{
+        //    matrix.push_back(1.0);
+        //    matrix.push_back(0.0);
+        //    matrix.push_back(0.0);
+        //    matrix.push_back(node->group.translation[0]);
 
-            matrix.push_back(0.0);
-            matrix.push_back(1.0);
-            matrix.push_back(0.0);
-            matrix.push_back(node->group.translation[1]);
+        //    matrix.push_back(0.0);
+        //    matrix.push_back(1.0);
+        //    matrix.push_back(0.0);
+        //    matrix.push_back(node->group.translation[1]);
 
-            matrix.push_back(0.0);
-            matrix.push_back(0.0);
-            matrix.push_back(1.0);
-            matrix.push_back(node->group.translation[2]);
+        //    matrix.push_back(0.0);
+        //    matrix.push_back(0.0);
+        //    matrix.push_back(1.0);
+        //    matrix.push_back(node->group.translation[2]);
 
-            matrix.push_back(0.0);
-            matrix.push_back(0.0);
-            matrix.push_back(0.0);
-            matrix.push_back(1.0);
-        }
-        SendInstance(ctx,hPipe, node->group.name, matrix, parentId, nodeId);
+        //    matrix.push_back(0.0);
+        //    matrix.push_back(0.0);
+        //    matrix.push_back(0.0);
+        //    matrix.push_back(1.0);
+        //}
+        SendInstance(ctx, hPipe, node, node->group.name, matrix, parentId, nodeId);
         ReadWaiting(ctx, hPipe);
 
       //if (includeContent) 
@@ -567,33 +721,36 @@ namespace ExportNamedPipe{
   }
 
 
-  void extendBounds(BBox3f& worldBounds, const Node* node)
+  void extendBounds(BBox3f& worldBounds, Node* node)
   {
+      BBox3f nodeBounds = createEmptyBBox3f();
     for (Node* child = node->children.first; child; child = child->next) {
-      extendBounds(worldBounds, child);
+      extendBounds(nodeBounds, child);
     }
     if (node->kind == Node::Kind::Group) {
       for (Geometry* geo = node->group.geometries.first; geo; geo = geo->next) {
-        engulf(worldBounds, geo->bboxWorld);
+        engulf(nodeBounds, geo->bboxWorld);
       }
     }
+    node->bboxWorld = nodeBounds;
+    engulf(worldBounds, nodeBounds);
   }
 
-  void calculateOrigin(Context& ctx, Model& model, const Node* firstNode)
-  {
-    BBox3f worldBounds = createEmptyBBox3f();
+  //void calculateOrigin(Context& ctx, Model& model, Node* firstNode)
+  //{
+  //  BBox3f worldBounds = createEmptyBBox3f();
 
-    for (const Node* node = firstNode; node; node = node->next) {
-      extendBounds(worldBounds, node);
-    }
+  //  for (Node* node = firstNode; node; node = node->next) {
+  //    extendBounds(worldBounds, node);
+  //  }
 
-    model.origin = 0.5f * (worldBounds.min + worldBounds.max);
-    ctx.logger(0, "exportGLTF: world bounds = [%.2f, %.2f, %.2f]x[%.2f, %.2f, %.2f]",
-               worldBounds.min.x, worldBounds.min.y, worldBounds.min.z,
-               worldBounds.max.x, worldBounds.max.y, worldBounds.max.z);
-    ctx.logger(0, "exportGLTF: setting origin = [%.2f, %.2f, %.2f]",
-               model.origin.x, model.origin.y, model.origin.z);
-  }
+  //  model.origin = 0.5f * (worldBounds.min + worldBounds.max);
+  //  ctx.logger(0, "exportGLTF: world bounds = [%.2f, %.2f, %.2f]x[%.2f, %.2f, %.2f]",
+  //             worldBounds.min.x, worldBounds.min.y, worldBounds.min.z,
+  //             worldBounds.max.x, worldBounds.max.y, worldBounds.max.z);
+  //  ctx.logger(0, "exportGLTF: setting origin = [%.2f, %.2f, %.2f]",
+  //             model.origin.x, model.origin.y, model.origin.z);
+  //}
 
 
 
@@ -603,45 +760,98 @@ using namespace ExportNamedPipe;
 
 bool exportNamedPipe(Store* store, Logger logger, const std::string& pipename)
 {
-  Context ctx{
-    .logger = logger
-  };
+    Context ctx{
+      .logger = logger
+    };
 
-  ctx.logger(0, "exportNamedPipe: rotate-z-to-y=%u center=%u attributes=%u",
-             ctx.rotateZToY ? 1 : 0,
-             ctx.centerModel ? 1 : 0,
-             ctx.includeAttributes ? 1 : 0);
+    ctx.logger(0, "exportNamedPipe: rotate-z-to-y=%u center=%u attributes=%u",
+        ctx.rotateZToY ? 1 : 0,
+        ctx.centerModel ? 1 : 0,
+        ctx.includeAttributes ? 1 : 0);
 
-  std::wstring fullpipename = L"\\\\.\\pipe\\";
+    std::wstring fullpipename = L"\\\\.\\pipe\\";
 
-  fullpipename = fullpipename + string_to_wstring(pipename);
+    fullpipename = fullpipename + string_to_wstring(pipename);
 
-  HANDLE hPipe = CreateFile(
-      fullpipename.c_str(),
-      GENERIC_READ | GENERIC_WRITE,
-      0, NULL, OPEN_EXISTING, 0, NULL);
+    HANDLE hPipe = CreateFile(
+        fullpipename.c_str(),
+        GENERIC_READ | GENERIC_WRITE,
+        0, NULL, OPEN_EXISTING, 0, NULL);
 
-  //HANDLE hPipe = CreateNamedPipe(
-  //    fullpipename.c_str(),         // 管道名称 
-  //    PIPE_ACCESS_DUPLEX,            // 双向通信 
-  //    PIPE_TYPE_MESSAGE | PIPE_WAIT, // 消息模式+阻塞 
-  //    PIPE_UNLIMITED_INSTANCES,      // 最大实例数 
-  //    4096, 4096,                    // 输入输出缓冲区 
-  //    0, NULL);                      // 安全属性 
+    if (hPipe != INVALID_HANDLE_VALUE) {
 
-  processChildren(ctx, hPipe, store->getFirstRoot(), 0, 0);
+        //// 获取当前超时配置 
+        //COMMTIMEOUTS timeouts;
+        //GetCommTimeouts(hPipe, &timeouts);
 
-  CustomMessageHeader pMsg;
-  pMsg.msgType = 999;
-  pMsg.contentLength = 0;
+        //FString timeoutsettingfile = DataAccessUtil::GetExeDir() / "meshconverttimeout";
+        //FString timeoutsetting;
+        //FFileHelper::LoadFileToString(timeoutsetting, *timeoutsettingfile);
 
-  // 发送完整数据块
-  DWORD bytesWritten;
-  WriteFile(hPipe, &pMsg, sizeof(CustomMessageHeader), &bytesWritten, NULL);
+        //if (timeoutsetting.IsNumeric())
+        //{
+        //    timeouts.ReadTotalTimeoutConstant = FCString::Atoi(*timeoutsetting);
+        //}
+        //else
+        //{
+        //    timeouts.ReadTotalTimeoutConstant = 60000;   // 固定总超时60秒 
+        //}
 
-  // 4. 清理资源 
-  DisconnectNamedPipe(hPipe);
-  CloseHandle(hPipe);
+        //ReadTotalTimeoutConstant = timeouts.ReadTotalTimeoutConstant;
 
-  return true;
+        //// 设置读超时参数（单位：毫秒）
+        ////timeouts.ReadIntervalTimeout = 50;          // 字节间最大间隔50ms 
+        ////timeouts.ReadTotalTimeoutMultiplier = 10;   // 每字节耗时10ms 
+
+        //// 应用新配置 
+        //SetCommTimeouts(hPipe, &timeouts);
+
+
+
+        //STUDIO_LOG(LogTemp, Display, TEXT("connected %s. set timeout to %d(ms,setting by meshconverttimeout file)"),
+        //    *mConvertInfo.PipeServerAppParam, timeouts.ReadTotalTimeoutConstant);
+
+        //SendConfig();
+
+        //bShouldCreatePipe = false;
+
+        //return true;
+    }
+    else
+    {
+        ctx.logger(2, "初始化失败");
+        return false;
+    }
+
+    SendPipeDataVersion(ctx, hPipe);
+
+    ReadWaiting(ctx, hPipe);
+
+    //HANDLE hPipe = CreateNamedPipe(
+    //    fullpipename.c_str(),         // 管道名称 
+    //    PIPE_ACCESS_DUPLEX,            // 双向通信 
+    //    PIPE_TYPE_MESSAGE | PIPE_WAIT, // 消息模式+阻塞 
+    //    PIPE_UNLIMITED_INSTANCES,      // 最大实例数 
+    //    4096, 4096,                    // 输入输出缓冲区 
+    //    0, NULL);                      // 安全属性 
+
+    BBox3f worldBounds = createEmptyBBox3f();
+
+    extendBounds(worldBounds, store->getFirstRoot());
+
+    processChildren(ctx, hPipe, store->getFirstRoot(), 0, 0);
+
+    CustomMessageHeader pMsg;
+    pMsg.msgType = 999;
+    pMsg.contentLength = 0;
+
+    // 发送完整数据块
+    DWORD bytesWritten;
+    WriteFile(hPipe, &pMsg, sizeof(CustomMessageHeader), &bytesWritten, NULL);
+
+    // 4. 清理资源 
+    DisconnectNamedPipe(hPipe);
+    CloseHandle(hPipe);
+
+    return true;
 }

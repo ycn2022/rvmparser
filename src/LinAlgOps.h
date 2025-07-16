@@ -95,7 +95,7 @@ inline Vec3d mul(const Mat3x4d& A, const Vec3d& x)
 
 inline BBox3f createEmptyBBox3f()
 {
-  return makeBBox3f(makeVec3f(FLT_MAX, FLT_MAX, FLT_MAX), makeVec3f(-FLT_MAX, -FLT_MAX, -FLT_MAX));
+    return makeBBox3f(makeVec3f(FLT_MAX, FLT_MAX, FLT_MAX), makeVec3f(-FLT_MAX, -FLT_MAX, -FLT_MAX), false);
 }
 
 inline BBox3f makeBBox3f(const BBox3f& bbox, float margin)

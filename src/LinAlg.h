@@ -89,14 +89,15 @@ struct BBox3f
       Vec3f max;
     };
     float data[6];
+    bool isValid = false;
   };
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 };
 
-inline BBox3f makeBBox3f(const BBox3f& a) { BBox3f r; r.min = a.min; r.max = a.max; return r; }
-inline BBox3f makeBBox3f(const Vec3f& min, const Vec3f& max) { BBox3f r; r.min = min; r.max = max; return r; }
+inline BBox3f makeBBox3f(const BBox3f& a) { BBox3f r; r.min = a.min; r.max = a.max; r.isValid = a.isValid; return r; }
+inline BBox3f makeBBox3f(const Vec3f& min, const Vec3f& max, const bool& isvalid = true) { BBox3f r; r.min = min; r.max = max; r.isValid = isvalid; return r; }
 
 
 struct Mat3f

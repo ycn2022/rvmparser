@@ -221,6 +221,8 @@ struct Node
   Kind kind = Kind::Group;
   Flags flags = Flags::None;
 
+  BBox3f bboxWorld;
+
   void setFlag(Flags flag) { flags = (Flags)((unsigned)flags | (unsigned)flag); }
   void unsetFlag(Flags flag) { flags = (Flags)((unsigned)flags & (~(unsigned)flag)); }
   bool hasFlag(Flags flag) const { return ((unsigned)flags & (unsigned)flag) != 0; }
