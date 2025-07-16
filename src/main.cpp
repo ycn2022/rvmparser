@@ -33,7 +33,10 @@
 #include "ChunkTiny.h"
 #include "AddGroupBBox.h"
 #include "Colorizer.h"
+#include "StudioColorizer.h"
 
+
+#define ORIGINMAIN 0
 
 void logger(unsigned level, const char* msg, ...)
 {
@@ -206,7 +209,7 @@ Post bug reports or questions at https://github.com/cdyk/rvmparser
 
 }
 
-/*
+#if ORIGINMAIN
 int main(int argc, char** argv)
 {
   int rv = 0;
@@ -328,11 +331,15 @@ int main(int argc, char** argv)
           should_tessellate = true;
           continue;
         }
+        else
+        {
+            continue;
+        }
       }
 
       fprintf(stderr, "Unrecognized argument '%s'", arg.c_str());
       printHelp(argv[0]);
-      return -1;
+      //return -1;
     }
 
     auto arg_lc = arg;
@@ -367,7 +374,7 @@ int main(int argc, char** argv)
   }
 
   if ((rv == 0) && should_colorize) {
-    Colorizer colorizer(logger, color_attribute.empty() ? nullptr : color_attribute.c_str());
+    StudioColorizer colorizer(logger, color_attribute.empty() ? nullptr : color_attribute.c_str());
     store->apply(&colorizer);
   }
 
@@ -571,7 +578,7 @@ int main(int argc, char** argv)
   return rv;
 }
 
-*/
+#else
 
 
 int main(int argc, char** argv)
@@ -715,7 +722,7 @@ int main(int argc, char** argv)
   }
 
   if ((rv == 0) && should_colorize) {
-    Colorizer colorizer(logger, color_attribute.empty() ? nullptr : color_attribute.c_str());
+      StudioColorizer colorizer(logger, color_attribute.empty() ? nullptr : color_attribute.c_str());
     store->apply(&colorizer);
   }
 
@@ -764,3 +771,5 @@ int main(int argc, char** argv)
 
   return rv;
 }
+
+#endif
