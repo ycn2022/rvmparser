@@ -72,6 +72,8 @@ namespace ExportNamedPipe{
         double WorldMin[3];
         double WorldMax[3];
         double Matrix[12];
+        int GeometryType = 0;
+        int TriangleCount = 0;
         std::string Geometry;
 
     };
@@ -493,7 +495,7 @@ namespace ExportNamedPipe{
 
   bool SendShape(Context& ctx, HANDLE hPipe, TriangulationFactory* factory, Geometry* geo, const int64_t& instanceId)
   {
-
+      int TriangleCount = 0;
       int64_t  matId = 0;
       if (SendMaterial(ctx, hPipe, geo, matId))
       {
@@ -514,6 +516,8 @@ namespace ExportNamedPipe{
           subshape->offset[1] = geo->pyramid.offset[1];
           subshape->height = geo->pyramid.height;
 
+          TriangleCount = 10;
+
           shape = subshape;
 
       }
@@ -525,6 +529,8 @@ namespace ExportNamedPipe{
           subshape->dX = geo->box.lengths[0];
           subshape->dY = geo->box.lengths[1];
           subshape->dZ = geo->box.lengths[2];
+
+          TriangleCount = 12;
 
           shape = subshape;
 
@@ -538,6 +544,9 @@ namespace ExportNamedPipe{
           subshape->inner_radius = geo->rectangularTorus.inner_radius;
           subshape->outer_radius = geo->rectangularTorus.outer_radius;
 
+
+          TriangleCount = 10;
+
           shape = subshape;
 
       }
@@ -547,6 +556,8 @@ namespace ExportNamedPipe{
           std::shared_ptr<e5dFace_Sphere3d> subshape = std::make_shared<e5dFace_Sphere3d>();
           subshape->radius = geo->sphere.diameter / 2.0;
 
+          TriangleCount = 60;
+            
           shape = subshape;
 
       }
@@ -583,6 +594,8 @@ namespace ExportNamedPipe{
               subshape->faces.push_back(geo->triangulation->indices[i * 3 + 2]);
           }
 
+          TriangleCount = subshape->faces.size();
+
           shape = subshape;
 
       }
@@ -601,6 +614,8 @@ namespace ExportNamedPipe{
           subshape->offset[0] = geo->snout.offset[0];
           subshape->offset[1] = geo->snout.offset[1];
 
+          TriangleCount = 10;
+
           shape = subshape;
 
       }
@@ -611,6 +626,8 @@ namespace ExportNamedPipe{
           std::shared_ptr<e5dFace_EllipticalDish> subshape = std::make_shared<e5dFace_EllipticalDish>();
           subshape->baseRadius = geo->ellipticalDish.baseRadius;
           subshape->height = geo->ellipticalDish.height;
+
+          TriangleCount = 10;
 
           shape = subshape;
 
@@ -624,6 +641,8 @@ namespace ExportNamedPipe{
           subshape->baseRadius = geo->sphericalDish.baseRadius;
           subshape->height = geo->sphericalDish.height;
 
+          TriangleCount = 10;
+
           shape = subshape;
 
       }
@@ -634,6 +653,8 @@ namespace ExportNamedPipe{
           std::shared_ptr<e5dFace_Cylinder> subshape = std::make_shared<e5dFace_Cylinder>();
           subshape->radius = geo->cylinder.radius;
           subshape->hight = geo->cylinder.height;
+
+          TriangleCount = 60;
 
           shape = subshape;
 
@@ -648,6 +669,8 @@ namespace ExportNamedPipe{
           subshape->radius = geo->circularTorus.radius;
           subshape->angle = geo->circularTorus.angle;
           subshape->offset = geo->circularTorus.offset;
+
+          TriangleCount = 10;
 
           shape = subshape;
 
@@ -669,7 +692,8 @@ namespace ExportNamedPipe{
 
       CustomMessageHeader pMsg;
       pMsg.msgType = 3;
-      pMsg.contentLength = sizeof(int64_t) + sizeof(int64_t) + sizeof(int64_t) + sizeof(double) * 24 + binstr.length();
+      pMsg.contentLength = sizeof(int64_t) + sizeof(int64_t) + sizeof(int64_t) +
+          sizeof(double) * 24 + sizeof(int) * 2 + binstr.length();
 
       double localMin[3] = { geo->bboxLocal.min.x,geo->bboxLocal.min.y,geo->bboxLocal.min.z };
       double localMax[3] = { geo->bboxLocal.max.x,geo->bboxLocal.max.y,geo->bboxLocal.max.z };
@@ -695,6 +719,7 @@ namespace ExportNamedPipe{
 
       auto shapeId = ++ShapeId;
 
+      int geometrytype = shape->type();
 
       // 发送完整数据块
       DWORD bytesWritten;
@@ -707,6 +732,8 @@ namespace ExportNamedPipe{
       WriteFile(hPipe, worldMin, sizeof(worldMin), &bytesWritten, NULL);
       WriteFile(hPipe, worldMax, sizeof(worldMax), &bytesWritten, NULL);
       WriteFile(hPipe, Matrix, sizeof(Matrix), &bytesWritten, NULL);
+      WriteFile(hPipe, &geometrytype, sizeof(int), &bytesWritten, NULL);
+      WriteFile(hPipe, &TriangleCount, sizeof(int), &bytesWritten, NULL);
       WriteFile(hPipe, binstr.data(), binstr.length(), &bytesWritten, NULL);
 
 
