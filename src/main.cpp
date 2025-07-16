@@ -738,7 +738,7 @@ int main(int argc, char** argv)
       logger(0, "Exported  in %lldms", e);
   }
   else {
-      logger(2, "Failed to export  into ");
+      logger(2, "Failed to export  ");
       rv = -1;
   }
 

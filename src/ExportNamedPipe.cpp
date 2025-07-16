@@ -15,6 +15,7 @@
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/filewritestream.h>
 
+#include "Tessellator.h"
 #include "Store.h"
 #include "LinAlgOps.h"
 #include <string>
@@ -104,6 +105,8 @@ namespace ExportNamedPipe{
     int64_t MaterialId = 0;
 
     Map definedMaterials;
+
+    Store* __store = nullptr;
 
   struct DataItem
   {
@@ -256,13 +259,13 @@ namespace ExportNamedPipe{
     }
   }
 
-  void processNode(Context& ctx, HANDLE hPipe, const Node* node, size_t level, const int64_t& parentId);
+  void processNode(Context& ctx, HANDLE hPipe, TriangulationFactory* factory, const Node* node, size_t level, const int64_t& parentId);
 
-  void processChildren(Context& ctx, HANDLE hPipe, const Node* firstChild, size_t level, const int64_t& parentId)
+  void processChildren(Context& ctx, HANDLE hPipe, TriangulationFactory* factory, const Node* firstChild, size_t level, const int64_t& parentId)
   {
     size_t nextLevel = level + 1;
     for (const Node* child = firstChild; child; child = child->next) {
-        processNode(ctx, hPipe, child, nextLevel, parentId);
+        processNode(ctx, hPipe, factory, child, nextLevel, parentId);
     }
   }
 
@@ -488,7 +491,7 @@ namespace ExportNamedPipe{
 
 
 
-  bool SendShape(Context& ctx, HANDLE hPipe, Geometry* geo, const int64_t& instanceId)
+  bool SendShape(Context& ctx, HANDLE hPipe, TriangulationFactory* factory, Geometry* geo, const int64_t& instanceId)
   {
 
       int64_t  matId = 0;
@@ -501,6 +504,19 @@ namespace ExportNamedPipe{
       switch (geo->kind) {
 
       case Geometry::Kind::Pyramid:
+      {
+          std::shared_ptr<e5dFace_Pyramid> subshape = std::make_shared<e5dFace_Pyramid>();
+          subshape->top[0] = geo->pyramid.top[0];
+          subshape->top[1] = geo->pyramid.top[1];
+          subshape->bottom[0] = geo->pyramid.bottom[0];
+          subshape->bottom[1] = geo->pyramid.bottom[1];
+          subshape->offset[0] = geo->pyramid.offset[0];
+          subshape->offset[1] = geo->pyramid.offset[1];
+          subshape->height = geo->pyramid.height;
+
+          shape = subshape;
+
+      }
           break;
       case Geometry::Kind::Box:
 
@@ -515,6 +531,16 @@ namespace ExportNamedPipe{
       }
           break;
       case Geometry::Kind::RectangularTorus:
+      {
+          std::shared_ptr<e5dFace_RectangularTorus> subshape = std::make_shared<e5dFace_RectangularTorus>();
+          subshape->angle = geo->rectangularTorus.angle;
+          subshape->height = geo->rectangularTorus.height;
+          subshape->inner_radius = geo->rectangularTorus.inner_radius;
+          subshape->outer_radius = geo->rectangularTorus.outer_radius;
+
+          shape = subshape;
+
+      }
           break;
       case Geometry::Kind::Sphere:
       {
@@ -529,13 +555,78 @@ namespace ExportNamedPipe{
           break;
       case Geometry::Kind::FacetGroup:
 
+      {
+          auto scale = getScale(geo->M_3x4);
+          geo->triangulation = factory->facetGroup(&__store->arenaTriangulation, geo, scale);
+          std::shared_ptr<e5d_Mesh> subshape = std::make_shared<e5d_Mesh>();
+          for (size_t i = 0; i < geo->triangulation->vertices_n; i++)
+          {
+              {
+                  std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
+                  vt->x = geo->triangulation->vertices[i * 3];
+                  vt->y = geo->triangulation->vertices[i * 3 + 1];
+                  vt->z = geo->triangulation->vertices[i * 3 + 2];
+                  subshape->postions.push_back(vt);
+              }
+              {
+                  std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
+                  vt->x = geo->triangulation->normals[i * 3];
+                  vt->y = geo->triangulation->normals[i * 3 + 1];
+                  vt->z = geo->triangulation->normals[i * 3 + 2];
+                  subshape->normals.push_back(vt);
+              }
+          }
+          for (size_t i = 0; i < geo->triangulation->triangles_n; i++)
+          {
+              subshape->faces.push_back(geo->triangulation->indices[i * 3]);
+              subshape->faces.push_back(geo->triangulation->indices[i * 3 + 1]);
+              subshape->faces.push_back(geo->triangulation->indices[i * 3 + 2]);
+          }
+
+          shape = subshape;
+
+      }
           break;
 
       case Geometry::Kind::Snout:
+      {
+          std::shared_ptr<e5dFace_Snout> subshape = std::make_shared<e5dFace_Snout>();
+          subshape->radius_t = geo->snout.radius_t;
+          subshape->tshear[0] = geo->snout.tshear[0];
+          subshape->tshear[1] = geo->snout.tshear[1];
+          subshape->radius_b = geo->snout.radius_b;
+          subshape->bshear[0] = geo->snout.bshear[0];
+          subshape->bshear[1] = geo->snout.bshear[1];
+          subshape->height = geo->snout.height;
+          subshape->offset[0] = geo->snout.offset[0];
+          subshape->offset[1] = geo->snout.offset[1];
+
+          shape = subshape;
+
+      }
           break;
       case Geometry::Kind::EllipticalDish:
+
+      {
+          std::shared_ptr<e5dFace_EllipticalDish> subshape = std::make_shared<e5dFace_EllipticalDish>();
+          subshape->baseRadius = geo->ellipticalDish.baseRadius;
+          subshape->height = geo->ellipticalDish.height;
+
+          shape = subshape;
+
+      }
           break;
       case Geometry::Kind::SphericalDish:
+
+
+      {
+          std::shared_ptr<e5dFace_SphericalDish> subshape = std::make_shared<e5dFace_SphericalDish>();
+          subshape->baseRadius = geo->sphericalDish.baseRadius;
+          subshape->height = geo->sphericalDish.height;
+
+          shape = subshape;
+
+      }
           break;
       case Geometry::Kind::Cylinder:
 
@@ -551,6 +642,16 @@ namespace ExportNamedPipe{
 
       case Geometry::Kind::CircularTorus:
 
+
+      {
+          std::shared_ptr<e5dFace_CircularTorus> subshape = std::make_shared<e5dFace_CircularTorus>();
+          subshape->radius = geo->circularTorus.radius;
+          subshape->angle = geo->circularTorus.angle;
+          subshape->offset = geo->circularTorus.offset;
+
+          shape = subshape;
+
+      }
           break;
 
       default:
@@ -630,93 +731,93 @@ namespace ExportNamedPipe{
 
   }
 
-  void processNode(Context& ctx, HANDLE hPipe, const Node* node, size_t level,const int64_t& parentId)
+  void processNode(Context& ctx, HANDLE hPipe, TriangulationFactory* factory, const Node* node, size_t level, const int64_t& parentId)
   {
 
       int64_t nodeId = 0;
       std::vector<double> matrix;
 
-    switch (node->kind) {
-    case Node::Kind::File:
-      if (node->file.path) {
-        
-          //
+      switch (node->kind) {
+      case Node::Kind::File:
+          if (node->file.path) {
 
-      }
-      SendModel(ctx, hPipe, node, node->file.path, nodeId);
-      ReadWaiting(ctx, hPipe);
-      //if (includeContent) {
-      //  addAttributes(ctx, model, rjNode, node);
-      //}
-      break;
-
-    case Node::Kind::Model:
-        SendInstance(ctx, hPipe, node, node->model.name, matrix, parentId, nodeId);
-        ReadWaiting(ctx, hPipe);
-      //if (includeContent) {
-      //  addAttributes(ctx, model, rjNode, node);
-      //}
-      break;
-
-    case Node::Kind::Group:
-        //if (node->group.translation[0] != 0 || node->group.translation[1] != 0 || node->group.translation[2] != 0)
-        //{
-        //    matrix.push_back(1.0);
-        //    matrix.push_back(0.0);
-        //    matrix.push_back(0.0);
-        //    matrix.push_back(node->group.translation[0]);
-
-        //    matrix.push_back(0.0);
-        //    matrix.push_back(1.0);
-        //    matrix.push_back(0.0);
-        //    matrix.push_back(node->group.translation[1]);
-
-        //    matrix.push_back(0.0);
-        //    matrix.push_back(0.0);
-        //    matrix.push_back(1.0);
-        //    matrix.push_back(node->group.translation[2]);
-
-        //    matrix.push_back(0.0);
-        //    matrix.push_back(0.0);
-        //    matrix.push_back(0.0);
-        //    matrix.push_back(1.0);
-        //}
-        SendInstance(ctx, hPipe, node, node->group.name, matrix, parentId, nodeId);
-        ReadWaiting(ctx, hPipe);
-
-      //if (includeContent) 
-      {
-        //addAttributes(ctx, model, rjNode, node);
-
-        if(node->group.geometries.first != nullptr) {
-
-
-          for (Geometry* geo = node->group.geometries.first; geo; geo = geo->next) {
-
-              if (SendShape(ctx, hPipe, geo, nodeId))
-              {
-                  ReadWaiting(ctx, hPipe);
-              }
+              //
 
           }
+          SendModel(ctx, hPipe, node, node->file.path, nodeId);
+          ReadWaiting(ctx, hPipe);
+          //if (includeContent) {
+          //  addAttributes(ctx, model, rjNode, node);
+          //}
+          break;
+
+      case Node::Kind::Model:
+          SendInstance(ctx, hPipe, node, node->model.name, matrix, parentId, nodeId);
+          ReadWaiting(ctx, hPipe);
+          //if (includeContent) {
+          //  addAttributes(ctx, model, rjNode, node);
+          //}
+          break;
+
+      case Node::Kind::Group:
+          //if (node->group.translation[0] != 0 || node->group.translation[1] != 0 || node->group.translation[2] != 0)
+          //{
+          //    matrix.push_back(1.0);
+          //    matrix.push_back(0.0);
+          //    matrix.push_back(0.0);
+          //    matrix.push_back(node->group.translation[0]);
+
+          //    matrix.push_back(0.0);
+          //    matrix.push_back(1.0);
+          //    matrix.push_back(0.0);
+          //    matrix.push_back(node->group.translation[1]);
+
+          //    matrix.push_back(0.0);
+          //    matrix.push_back(0.0);
+          //    matrix.push_back(1.0);
+          //    matrix.push_back(node->group.translation[2]);
+
+          //    matrix.push_back(0.0);
+          //    matrix.push_back(0.0);
+          //    matrix.push_back(0.0);
+          //    matrix.push_back(1.0);
+          //}
+          SendInstance(ctx, hPipe, node, node->group.name, matrix, parentId, nodeId);
+          ReadWaiting(ctx, hPipe);
+
+          //if (includeContent) 
+          {
+              //addAttributes(ctx, model, rjNode, node);
+
+              if (node->group.geometries.first != nullptr) {
+
+
+                  for (Geometry* geo = node->group.geometries.first; geo; geo = geo->next) {
+
+                      if (SendShape(ctx, hPipe, factory, geo, nodeId))
+                      {
+                          ReadWaiting(ctx, hPipe);
+                      }
+
+                  }
 
 
 
-        }
+              }
+          }
+          break;
+
+      default:
+          assert(false && "Illegal enum");
+          break;
       }
-      break;
 
-    default:
-      assert(false && "Illegal enum");
-      break;
-    }
+      if (nodeId > 0)
+      {
+          // And recurse into children
+          processChildren(ctx, hPipe, factory, node->children.first, level, nodeId);
 
-    if(nodeId>0)
-    {
-        // And recurse into children
-        processChildren(ctx, hPipe, node->children.first, level, nodeId);
-
-    }
+      }
 
   }
 
@@ -839,7 +940,16 @@ bool exportNamedPipe(Store* store, Logger logger, const std::string& pipename)
 
     extendBounds(worldBounds, store->getFirstRoot());
 
-    processChildren(ctx, hPipe, store->getFirstRoot(), 0, 0);
+    __store = store;
+
+    float tolerance = 0.1f;
+    int maxSamples = 100;
+    auto factory = new TriangulationFactory(store, logger, tolerance, 3, maxSamples);
+
+    processChildren(ctx, hPipe, factory, store->getFirstRoot(), 0, 0);
+
+
+    delete factory;
 
     CustomMessageHeader pMsg;
     pMsg.msgType = 999;

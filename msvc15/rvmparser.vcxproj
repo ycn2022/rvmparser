@@ -106,6 +106,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)..\libs\libtess2\include;$(ProjectDir)..\libs\rapidjson\include;D:\01Work\e5d-studio\studio-unreal\Refs\cereal-UE4\include\cereal\include;D:\01Work\e5d-studio\studio-unreal\Refs\e5d_Shape\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
