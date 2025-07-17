@@ -65,8 +65,11 @@ namespace ExportNamedPipe{
     // ShapeData 结构体 
     struct ShapeData {
         int64_t Id;
+        int64_t ShapeInstanceId;
         int64_t InstanceId;
         int64_t MaterialId;
+        int Name_len;
+        std::string Name;
         double LocalMin[3];
         double LocalMax[3];
         double WorldMin[3];
@@ -102,13 +105,16 @@ namespace ExportNamedPipe{
 
     int PipeDataVersion = 1;
 
-    int64_t InstanceId = 0;
-    int64_t ShapeId = 0;
-    int64_t MaterialId = 0;
+    int64_t GlobalInstanceId = 0;
+    int64_t GlobalShapeId = 0;
+    int64_t GlobalMaterialId = 0;
 
     Map definedMaterials;
 
     Store* __store = nullptr;
+
+    const float pi = float(M_PI);
+    const float half_pi = float(0.5 * M_PI);
 
   struct DataItem
   {
@@ -303,7 +309,7 @@ namespace ExportNamedPipe{
       double worldMin[3] = { node->bboxWorld.min.x,node->bboxWorld.min.y,node->bboxWorld.min.z };
       double worldMax[3] = { node->bboxWorld.max.x,node->bboxWorld.max.y,node->bboxWorld.max.z };
 
-      nodeId = ++InstanceId;
+      nodeId = ++GlobalInstanceId;
 
       // 发送完整数据块
       DWORD bytesWritten;
@@ -321,7 +327,7 @@ namespace ExportNamedPipe{
   }
 
 
-  void SendInstance(Context& ctx, HANDLE hPipe, const Node* node, const char* instName,const std::vector<double> & matrix, const int64_t& parentId, int64_t& nodeId)
+  void SendInstance(Context& ctx, HANDLE hPipe, const BBox3f& bboxWorld, const char* instName,const std::vector<double> & matrix, const int64_t& parentId, int64_t& nodeId)
   {
       const char* utf8Data = nullptr;
       int utf8Len = 0;
@@ -352,10 +358,10 @@ namespace ExportNamedPipe{
       pMsg.msgType = 2;
       pMsg.contentLength = sizeof(int64_t) + sizeof(int64_t) + sizeof(bool) + sizeof(double) * 6 + utf8Len;
 
-      double worldMin[3] = { node->bboxWorld.min.x,node->bboxWorld.min.y,node->bboxWorld.min.z };
-      double worldMax[3] = { node->bboxWorld.max.x,node->bboxWorld.max.y,node->bboxWorld.max.z };
+      double worldMin[3] = { bboxWorld.min.x,bboxWorld.min.y,bboxWorld.min.z };
+      double worldMax[3] = { bboxWorld.max.x,bboxWorld.max.y,bboxWorld.max.z };
 
-      nodeId = ++InstanceId;
+      nodeId = ++GlobalInstanceId;
 
       // 发送完整数据块
       DWORD bytesWritten;
@@ -401,7 +407,7 @@ namespace ExportNamedPipe{
 
       created = true;
 
-      int64_t matId = ++MaterialId;
+      int64_t matId = ++GlobalMaterialId;
 
       definedMaterials.insert(key, matId);
 
@@ -493,7 +499,7 @@ namespace ExportNamedPipe{
 
 
 
-  bool SendShape(Context& ctx, HANDLE hPipe, TriangulationFactory* factory, Geometry* geo, const int64_t& instanceId)
+  bool SendShape(Context& ctx, HANDLE hPipe, TriangulationFactory* factory, const char* instName, const int& GeoIndex, Geometry* geo, const int64_t& instanceId)
   {
       int TriangleCount = 0;
       int64_t  matId = 0;
@@ -501,6 +507,10 @@ namespace ExportNamedPipe{
       {
           ReadWaiting(ctx, hPipe);
       }
+
+      std::string geoname;
+
+      auto scale = getScale(geo->M_3x4);
 
       std::shared_ptr< e5d_Shape> shape = nullptr;
       switch (geo->kind) {
@@ -516,23 +526,32 @@ namespace ExportNamedPipe{
           subshape->offset[1] = geo->pyramid.offset[1];
           subshape->height = geo->pyramid.height;
 
-          TriangleCount = 10;
+          geo->triangulation = factory->pyramid(&__store->arenaTriangulation, geo, scale);
+
+          TriangleCount = geo->triangulation->triangles_n;
 
           shape = subshape;
+
+          geoname = "Pyramid " + std::to_string(GeoIndex) + " of ";
 
       }
           break;
       case Geometry::Kind::Box:
 
       {
-          std::shared_ptr<e5dFace_Box> subshape = std::make_shared<e5dFace_Box>();
-          subshape->dX = geo->box.lengths[0];
-          subshape->dY = geo->box.lengths[1];
-          subshape->dZ = geo->box.lengths[2];
+          std::shared_ptr<e5dFace_RvmBox> subshape = std::make_shared<e5dFace_RvmBox>();
+          subshape->lengthx = geo->box.lengths[0];
+          subshape->lengthy = geo->box.lengths[1];
+          subshape->lengthz = geo->box.lengths[2];
 
-          TriangleCount = 12;
+          geo->triangulation = factory->box(&__store->arenaTriangulation, geo, scale);
+
+          TriangleCount = geo->triangulation->triangles_n;
+          //TriangleCount = 12;
 
           shape = subshape;
+
+          geoname = "Box " + std::to_string(GeoIndex) + " of ";
 
       }
           break;
@@ -544,21 +563,32 @@ namespace ExportNamedPipe{
           subshape->inner_radius = geo->rectangularTorus.inner_radius;
           subshape->outer_radius = geo->rectangularTorus.outer_radius;
 
+          subshape->scale = scale;
 
-          TriangleCount = 10;
+          geo->triangulation = factory->rectangularTorus(&__store->arenaTriangulation, geo, scale);
+
+          TriangleCount = geo->triangulation->triangles_n;
 
           shape = subshape;
+
+          geoname = "RectangularTorus " + std::to_string(GeoIndex) + " of ";
 
       }
           break;
       case Geometry::Kind::Sphere:
       {
-          std::shared_ptr<e5dFace_Sphere3d> subshape = std::make_shared<e5dFace_Sphere3d>();
-          subshape->radius = geo->sphere.diameter / 2.0;
+          std::shared_ptr<e5dFace_RvmSphere> subshape = std::make_shared<e5dFace_RvmSphere>();
+          subshape->diameter = geo->sphere.diameter;
 
-          TriangleCount = 60;
+          subshape->scale = scale;
+
+          geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo, 0.5f * geo->sphere.diameter, pi, 0.f, 1.f, scale);
+
+          TriangleCount = geo->triangulation->triangles_n;
             
           shape = subshape;
+
+          geoname = "Sphere " + std::to_string(GeoIndex) + " of ";
 
       }
           break;
@@ -594,9 +624,13 @@ namespace ExportNamedPipe{
               subshape->faces.push_back(geo->triangulation->indices[i * 3 + 2]);
           }
 
-          TriangleCount = subshape->faces.size();
+
+          TriangleCount = geo->triangulation->triangles_n;
+          //TriangleCount = subshape->faces.size();
 
           shape = subshape;
+
+          geoname = "FacetGroup " + std::to_string(GeoIndex) + " of ";
 
       }
           break;
@@ -614,9 +648,15 @@ namespace ExportNamedPipe{
           subshape->offset[0] = geo->snout.offset[0];
           subshape->offset[1] = geo->snout.offset[1];
 
-          TriangleCount = 10;
+          subshape->scale = scale;
+
+          geo->triangulation = factory->snout(&__store->arenaTriangulation, geo, scale);
+
+          TriangleCount = geo->triangulation->triangles_n;
 
           shape = subshape;
+
+          geoname = "Snout " + std::to_string(GeoIndex) + " of ";
 
       }
           break;
@@ -627,9 +667,16 @@ namespace ExportNamedPipe{
           subshape->baseRadius = geo->ellipticalDish.baseRadius;
           subshape->height = geo->ellipticalDish.height;
 
-          TriangleCount = 10;
+          subshape->scale = scale;
+
+          geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo,
+              geo->ellipticalDish.baseRadius, half_pi, 0.f, geo->ellipticalDish.height / geo->ellipticalDish.baseRadius, scale);
+
+          TriangleCount = geo->triangulation->triangles_n;
 
           shape = subshape;
+
+          geoname = "EllipticalDish " + std::to_string(GeoIndex) + " of ";
 
       }
           break;
@@ -641,22 +688,40 @@ namespace ExportNamedPipe{
           subshape->baseRadius = geo->sphericalDish.baseRadius;
           subshape->height = geo->sphericalDish.height;
 
-          TriangleCount = 10;
+          subshape->scale = scale;
+
+          float r_circ = geo->sphericalDish.baseRadius;
+          auto h = geo->sphericalDish.height;
+          float r_sphere = (r_circ * r_circ + h * h) / (2.f * h);
+          float sinval = std::min(1.f, std::max(-1.f, r_circ / r_sphere));
+          float arc = asin(sinval);
+          if (r_circ < h) { arc = pi - arc; }
+          geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo, r_sphere, arc, h - r_sphere, 1.f, scale);
+
+          TriangleCount = geo->triangulation->triangles_n;
 
           shape = subshape;
+
+          geoname = "SphericalDish " + std::to_string(GeoIndex) + " of ";
 
       }
           break;
       case Geometry::Kind::Cylinder:
 
       {
-          std::shared_ptr<e5dFace_Cylinder> subshape = std::make_shared<e5dFace_Cylinder>();
+          std::shared_ptr<e5dFace_RvmCylinder> subshape = std::make_shared<e5dFace_RvmCylinder>();
           subshape->radius = geo->cylinder.radius;
-          subshape->hight = geo->cylinder.height;
+          subshape->height = geo->cylinder.height;
 
-          TriangleCount = 60;
+          subshape->scale = scale;
+
+          geo->triangulation = factory->cylinder(&__store->arenaTriangulation, geo, scale);
+
+          TriangleCount = geo->triangulation->triangles_n;
 
           shape = subshape;
+
+          geoname = "Cylinder " + std::to_string(GeoIndex) + " of ";
 
       }
           break;
@@ -670,9 +735,15 @@ namespace ExportNamedPipe{
           subshape->angle = geo->circularTorus.angle;
           subshape->offset = geo->circularTorus.offset;
 
-          TriangleCount = 10;
+          subshape->scale = scale;
+
+          geo->triangulation = factory->circularTorus(&__store->arenaTriangulation, geo, scale);
+
+          TriangleCount = geo->triangulation->triangles_n;
 
           shape = subshape;
+
+          geoname = "CircularTorus " + std::to_string(GeoIndex) + " of ";
 
       }
           break;
@@ -685,15 +756,46 @@ namespace ExportNamedPipe{
       if (shape == nullptr)
           return false;
 
+
+      if (TriangleCount == 0)
+      {
+          bool debug = true;
+      }
+
+      if (geo->triangulation->triangles_n == 0)
+      {
+          bool debug = true;
+      }
+
+
+      //shape->matrix
+
       std::string binstr;
 
       Shape2Binary(shape, binstr);
 
+      std::string shapename = geoname + (instName ? std::string(instName) : "");
+
+
+      const char* utf8Data = nullptr;
+      int utf8Len = 0;
+      bool needdelete = false;
+
+      if (!IsValidUTF8(shapename.data()))
+      {
+          utf8Data = ConvertToUTF8(shapename.data());
+          needdelete = true;
+      }
+      else
+      {
+          utf8Data = shapename.data();
+      }
+      utf8Len = strlen(utf8Data); // 获取字节长度 
 
       CustomMessageHeader pMsg;
       pMsg.msgType = 3;
-      pMsg.contentLength = sizeof(int64_t) + sizeof(int64_t) + sizeof(int64_t) +
-          sizeof(double) * 24 + sizeof(int) * 2 + binstr.length();
+      pMsg.contentLength = sizeof(int64_t) * 4 +
+          sizeof(double) * 24 + sizeof(int) * 3 + binstr.length() + utf8Len;
 
       double localMin[3] = { geo->bboxLocal.min.x,geo->bboxLocal.min.y,geo->bboxLocal.min.z };
       double localMax[3] = { geo->bboxLocal.max.x,geo->bboxLocal.max.y,geo->bboxLocal.max.z };
@@ -717,7 +819,9 @@ namespace ExportNamedPipe{
 
       //std::vector<uint8_t> Geometry;
 
-      auto shapeId = ++ShapeId;
+      auto shapeId = ++GlobalShapeId;
+
+      auto shapeInstanceId = ++GlobalInstanceId;
 
       int geometrytype = shape->type();
 
@@ -725,8 +829,11 @@ namespace ExportNamedPipe{
       DWORD bytesWritten;
       WriteFile(hPipe, &pMsg, sizeof(CustomMessageHeader), &bytesWritten, NULL);
       WriteFile(hPipe, &shapeId, sizeof(int64_t), &bytesWritten, NULL);
+      WriteFile(hPipe, &shapeInstanceId, sizeof(int64_t), &bytesWritten, NULL);
       WriteFile(hPipe, &instanceId, sizeof(int64_t), &bytesWritten, NULL);
       WriteFile(hPipe, &matId, sizeof(int64_t), &bytesWritten, NULL);
+      WriteFile(hPipe, &utf8Len, sizeof(int), &bytesWritten, NULL);
+      WriteFile(hPipe, utf8Data, utf8Len, &bytesWritten, NULL);
       WriteFile(hPipe, localMin, sizeof(localMin), &bytesWritten, NULL);
       WriteFile(hPipe, localMax, sizeof(localMax), &bytesWritten, NULL);
       WriteFile(hPipe, worldMin, sizeof(worldMin), &bytesWritten, NULL);
@@ -737,7 +844,11 @@ namespace ExportNamedPipe{
       WriteFile(hPipe, binstr.data(), binstr.length(), &bytesWritten, NULL);
 
 
-
+      if (needdelete)
+      {
+          delete[] utf8Data;
+          utf8Data = nullptr;
+      }
 
       return true;
   }
@@ -779,7 +890,7 @@ namespace ExportNamedPipe{
           break;
 
       case Node::Kind::Model:
-          SendInstance(ctx, hPipe, node, node->model.name, matrix, parentId, nodeId);
+          SendInstance(ctx, hPipe, node->bboxWorld, node->model.name, matrix, parentId, nodeId);
           ReadWaiting(ctx, hPipe);
           //if (includeContent) {
           //  addAttributes(ctx, model, rjNode, node);
@@ -787,6 +898,7 @@ namespace ExportNamedPipe{
           break;
 
       case Node::Kind::Group:
+      {
           //if (node->group.translation[0] != 0 || node->group.translation[1] != 0 || node->group.translation[2] != 0)
           //{
           //    matrix.push_back(1.0);
@@ -809,19 +921,39 @@ namespace ExportNamedPipe{
           //    matrix.push_back(0.0);
           //    matrix.push_back(1.0);
           //}
-          SendInstance(ctx, hPipe, node, node->group.name, matrix, parentId, nodeId);
+          SendInstance(ctx, hPipe, node->bboxWorld, node->group.name, matrix, parentId, nodeId);
           ReadWaiting(ctx, hPipe);
 
-          //if (includeContent) 
+          //bool debugname = false;
+
+          //if (node->group.name)
+          //{
+          //    std::string groupname(node->group.name);
+
+          //    if (groupname.ends_with("FLANGE 3 of BRANCH /P333AGW/B1"))
+          //    {
+          //        debugname = true;
+          //    }
+          //}
+
+          //if (debugname)
+              //if (includeContent) 
           {
               //addAttributes(ctx, model, rjNode, node);
 
               if (node->group.geometries.first != nullptr) {
 
-
+                  int GeoIndex = 0;
                   for (Geometry* geo = node->group.geometries.first; geo; geo = geo->next) {
+                      ++GeoIndex;
+                      //std::string geoname = node->group.name;
 
-                      if (SendShape(ctx, hPipe, factory, geo, nodeId))
+                      //int64_t shapeNodeId;
+
+                      //SendInstance(ctx, hPipe, node->group.bboxWorld, geoname.c_str(), matrix, nodeId, shapeNodeId);
+                      //ReadWaiting(ctx, hPipe);
+
+                      if (SendShape(ctx, hPipe, factory, node->group.name, GeoIndex, geo, nodeId))
                       {
                           ReadWaiting(ctx, hPipe);
                       }
@@ -832,6 +964,7 @@ namespace ExportNamedPipe{
 
               }
           }
+      }
           break;
 
       default:
@@ -971,7 +1104,7 @@ bool exportNamedPipe(Store* store, Logger logger, const std::string& pipename)
 
     float tolerance = 0.1f;
     int maxSamples = 100;
-    auto factory = new TriangulationFactory(store, logger, tolerance, 3, maxSamples);
+    auto factory = new TriangulationFactory(store, logger, tolerance, 6, maxSamples);
 
     processChildren(ctx, hPipe, factory, store->getFirstRoot(), 0, 0);
 
