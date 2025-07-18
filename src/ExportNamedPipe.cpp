@@ -804,260 +804,260 @@ namespace ExportNamedPipe{
       auto scale = getScale(geo->M_3x4);
 
       std::shared_ptr< e5d_Shape> shape = nullptr;
-      //switch (geo->kind) {
-
-      //case Geometry::Kind::Pyramid:
-      //{
-      //    std::shared_ptr<e5dFace_Pyramid> subshape = std::make_shared<e5dFace_Pyramid>();
-      //    subshape->top[0] = geo->pyramid.top[0];
-      //    subshape->top[1] = geo->pyramid.top[1];
-      //    subshape->bottom[0] = geo->pyramid.bottom[0];
-      //    subshape->bottom[1] = geo->pyramid.bottom[1];
-      //    subshape->offset[0] = geo->pyramid.offset[0];
-      //    subshape->offset[1] = geo->pyramid.offset[1];
-      //    subshape->height = geo->pyramid.height;
-
-      //    if (geo->triangulation == nullptr)
-      //        geo->triangulation = factory->pyramid(&__store->arenaTriangulation, geo, scale);
-
-      //    TriangleCount = geo->triangulation->triangles_n;
-
-      //    shape = subshape;
-
-      //    geoname = "Pyramid " + std::to_string(GeoIndex) + " of ";
-
-      //}
-      //break;
-      //case Geometry::Kind::Box:
-
-      //{
-      //    std::shared_ptr<e5dFace_RvmBox> subshape = std::make_shared<e5dFace_RvmBox>();
-      //    subshape->lengthx = geo->box.lengths[0];
-      //    subshape->lengthy = geo->box.lengths[1];
-      //    subshape->lengthz = geo->box.lengths[2];
-
-      //    if (geo->triangulation == nullptr)
-      //        geo->triangulation = factory->box(&__store->arenaTriangulation, geo, scale);
-
-      //    TriangleCount = geo->triangulation->triangles_n;
-      //    //TriangleCount = 12;
-
-      //    shape = subshape;
-
-      //    geoname = "Box " + std::to_string(GeoIndex) + " of ";
-
-      //}
-      //break;
-      //case Geometry::Kind::RectangularTorus:
-      //{
-      //    std::shared_ptr<e5dFace_RectangularTorus> subshape = std::make_shared<e5dFace_RectangularTorus>();
-      //    subshape->angle = geo->rectangularTorus.angle;
-      //    subshape->height = geo->rectangularTorus.height;
-      //    subshape->inner_radius = geo->rectangularTorus.inner_radius;
-      //    subshape->outer_radius = geo->rectangularTorus.outer_radius;
-
-      //    subshape->scale = scale;
-
-      //    if (geo->triangulation == nullptr)
-      //        geo->triangulation = factory->rectangularTorus(&__store->arenaTriangulation, geo, scale);
-
-      //    TriangleCount = geo->triangulation->triangles_n;
-
-      //    shape = subshape;
-
-      //    geoname = "RectangularTorus " + std::to_string(GeoIndex) + " of ";
-
-      //}
-      //break;
-      //case Geometry::Kind::Sphere:
-      //{
-      //    std::shared_ptr<e5dFace_RvmSphere> subshape = std::make_shared<e5dFace_RvmSphere>();
-      //    subshape->diameter = geo->sphere.diameter;
-
-      //    subshape->scale = scale;
+      switch (geo->kind) {
+
+      case Geometry::Kind::Pyramid:
+      {
+          std::shared_ptr<e5dFace_Pyramid> subshape = std::make_shared<e5dFace_Pyramid>();
+          subshape->top[0] = geo->pyramid.top[0];
+          subshape->top[1] = geo->pyramid.top[1];
+          subshape->bottom[0] = geo->pyramid.bottom[0];
+          subshape->bottom[1] = geo->pyramid.bottom[1];
+          subshape->offset[0] = geo->pyramid.offset[0];
+          subshape->offset[1] = geo->pyramid.offset[1];
+          subshape->height = geo->pyramid.height;
+
+          if (geo->triangulation == nullptr)
+              geo->triangulation = factory->pyramid(&__store->arenaTriangulation, geo, scale);
+
+          TriangleCount = geo->triangulation->triangles_n;
+
+          shape = subshape;
+
+          geoname = "Pyramid " + std::to_string(GeoIndex) + " of ";
+
+      }
+      break;
+      case Geometry::Kind::Box:
+
+      {
+          std::shared_ptr<e5dFace_RvmBox> subshape = std::make_shared<e5dFace_RvmBox>();
+          subshape->lengthx = geo->box.lengths[0];
+          subshape->lengthy = geo->box.lengths[1];
+          subshape->lengthz = geo->box.lengths[2];
+
+          if (geo->triangulation == nullptr)
+              geo->triangulation = factory->box(&__store->arenaTriangulation, geo, scale);
+
+          TriangleCount = geo->triangulation->triangles_n;
+          //TriangleCount = 12;
+
+          shape = subshape;
+
+          geoname = "Box " + std::to_string(GeoIndex) + " of ";
+
+      }
+      break;
+      case Geometry::Kind::RectangularTorus:
+      {
+          std::shared_ptr<e5dFace_RectangularTorus> subshape = std::make_shared<e5dFace_RectangularTorus>();
+          subshape->angle = geo->rectangularTorus.angle;
+          subshape->height = geo->rectangularTorus.height;
+          subshape->inner_radius = geo->rectangularTorus.inner_radius;
+          subshape->outer_radius = geo->rectangularTorus.outer_radius;
+
+          subshape->scale = scale;
+
+          if (geo->triangulation == nullptr)
+              geo->triangulation = factory->rectangularTorus(&__store->arenaTriangulation, geo, scale);
+
+          TriangleCount = geo->triangulation->triangles_n;
+
+          shape = subshape;
+
+          geoname = "RectangularTorus " + std::to_string(GeoIndex) + " of ";
+
+      }
+      break;
+      case Geometry::Kind::Sphere:
+      {
+          std::shared_ptr<e5dFace_RvmSphere> subshape = std::make_shared<e5dFace_RvmSphere>();
+          subshape->diameter = geo->sphere.diameter;
+
+          subshape->scale = scale;
 
-      //    if (geo->triangulation == nullptr)
-      //        geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo, 0.5f * geo->sphere.diameter, pi, 0.f, 1.f, scale);
+          if (geo->triangulation == nullptr)
+              geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo, 0.5f * geo->sphere.diameter, pi, 0.f, 1.f, scale);
 
-      //    TriangleCount = geo->triangulation->triangles_n;
+          TriangleCount = geo->triangulation->triangles_n;
 
-      //    shape = subshape;
+          shape = subshape;
 
-      //    geoname = "Sphere " + std::to_string(GeoIndex) + " of ";
+          geoname = "Sphere " + std::to_string(GeoIndex) + " of ";
 
-      //}
-      //break;
-      //case Geometry::Kind::Line:
-      //    break;
-      //case Geometry::Kind::FacetGroup:
+      }
+      break;
+      case Geometry::Kind::Line:
+          break;
+      case Geometry::Kind::FacetGroup:
 
-      //{
-      //    auto scale = getScale(geo->M_3x4);
-      //    if (geo->triangulation == nullptr)
-      //        geo->triangulation = factory->facetGroup(&__store->arenaTriangulation, geo, scale);
-      //    std::shared_ptr<e5d_Mesh> subshape = std::make_shared<e5d_Mesh>();
-      //    for (size_t i = 0; i < geo->triangulation->vertices_n; i++)
-      //    {
-      //        {
-      //            std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
-      //            vt->x = geo->triangulation->vertices[i * 3];
-      //            vt->y = geo->triangulation->vertices[i * 3 + 1];
-      //            vt->z = geo->triangulation->vertices[i * 3 + 2];
-      //            subshape->postions.push_back(vt);
-      //        }
-      //        {
-      //            std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
-      //            vt->x = geo->triangulation->normals[i * 3];
-      //            vt->y = geo->triangulation->normals[i * 3 + 1];
-      //            vt->z = geo->triangulation->normals[i * 3 + 2];
-      //            subshape->normals.push_back(vt);
-      //        }
-      //    }
-      //    for (size_t i = 0; i < geo->triangulation->triangles_n; i++)
-      //    {
-      //        subshape->faces.push_back(geo->triangulation->indices[i * 3]);
-      //        subshape->faces.push_back(geo->triangulation->indices[i * 3 + 1]);
-      //        subshape->faces.push_back(geo->triangulation->indices[i * 3 + 2]);
-      //    }
+      {
+          auto scale = getScale(geo->M_3x4);
+          if (geo->triangulation == nullptr)
+              geo->triangulation = factory->facetGroup(&__store->arenaTriangulation, geo, scale);
+          std::shared_ptr<e5d_Mesh> subshape = std::make_shared<e5d_Mesh>();
+          for (size_t i = 0; i < geo->triangulation->vertices_n; i++)
+          {
+              {
+                  std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
+                  vt->x = geo->triangulation->vertices[i * 3];
+                  vt->y = geo->triangulation->vertices[i * 3 + 1];
+                  vt->z = geo->triangulation->vertices[i * 3 + 2];
+                  subshape->postions.push_back(vt);
+              }
+              {
+                  std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
+                  vt->x = geo->triangulation->normals[i * 3];
+                  vt->y = geo->triangulation->normals[i * 3 + 1];
+                  vt->z = geo->triangulation->normals[i * 3 + 2];
+                  subshape->normals.push_back(vt);
+              }
+          }
+          for (size_t i = 0; i < geo->triangulation->triangles_n; i++)
+          {
+              subshape->faces.push_back(geo->triangulation->indices[i * 3]);
+              subshape->faces.push_back(geo->triangulation->indices[i * 3 + 1]);
+              subshape->faces.push_back(geo->triangulation->indices[i * 3 + 2]);
+          }
 
 
-      //    TriangleCount = geo->triangulation->triangles_n;
-      //    //TriangleCount = subshape->faces.size();
+          TriangleCount = geo->triangulation->triangles_n;
+          //TriangleCount = subshape->faces.size();
 
-      //    shape = subshape;
+          shape = subshape;
 
-      //    geoname = "FacetGroup " + std::to_string(GeoIndex) + " of ";
+          geoname = "FacetGroup " + std::to_string(GeoIndex) + " of ";
 
-      //}
-      //break;
+      }
+      break;
 
-      //case Geometry::Kind::Snout:
-      //{
-      //    std::shared_ptr<e5dFace_Snout> subshape = std::make_shared<e5dFace_Snout>();
-      //    subshape->radius_t = geo->snout.radius_t;
-      //    subshape->tshear[0] = geo->snout.tshear[0];
-      //    subshape->tshear[1] = geo->snout.tshear[1];
-      //    subshape->radius_b = geo->snout.radius_b;
-      //    subshape->bshear[0] = geo->snout.bshear[0];
-      //    subshape->bshear[1] = geo->snout.bshear[1];
-      //    subshape->height = geo->snout.height;
-      //    subshape->offset[0] = geo->snout.offset[0];
-      //    subshape->offset[1] = geo->snout.offset[1];
+      case Geometry::Kind::Snout:
+      {
+          std::shared_ptr<e5dFace_Snout> subshape = std::make_shared<e5dFace_Snout>();
+          subshape->radius_t = geo->snout.radius_t;
+          subshape->tshear[0] = geo->snout.tshear[0];
+          subshape->tshear[1] = geo->snout.tshear[1];
+          subshape->radius_b = geo->snout.radius_b;
+          subshape->bshear[0] = geo->snout.bshear[0];
+          subshape->bshear[1] = geo->snout.bshear[1];
+          subshape->height = geo->snout.height;
+          subshape->offset[0] = geo->snout.offset[0];
+          subshape->offset[1] = geo->snout.offset[1];
 
-      //    subshape->scale = scale;
+          subshape->scale = scale;
 
-      //    if (geo->triangulation == nullptr)
-      //        geo->triangulation = factory->snout(&__store->arenaTriangulation, geo, scale);
+          if (geo->triangulation == nullptr)
+              geo->triangulation = factory->snout(&__store->arenaTriangulation, geo, scale);
 
-      //    TriangleCount = geo->triangulation->triangles_n;
+          TriangleCount = geo->triangulation->triangles_n;
 
-      //    shape = subshape;
+          shape = subshape;
 
-      //    geoname = "Snout " + std::to_string(GeoIndex) + " of ";
+          geoname = "Snout " + std::to_string(GeoIndex) + " of ";
 
-      //}
-      //break;
-      //case Geometry::Kind::EllipticalDish:
+      }
+      break;
+      case Geometry::Kind::EllipticalDish:
 
-      //{
-      //    std::shared_ptr<e5dFace_EllipticalDish> subshape = std::make_shared<e5dFace_EllipticalDish>();
-      //    subshape->baseRadius = geo->ellipticalDish.baseRadius;
-      //    subshape->height = geo->ellipticalDish.height;
+      {
+          std::shared_ptr<e5dFace_EllipticalDish> subshape = std::make_shared<e5dFace_EllipticalDish>();
+          subshape->baseRadius = geo->ellipticalDish.baseRadius;
+          subshape->height = geo->ellipticalDish.height;
 
-      //    subshape->scale = scale;
+          subshape->scale = scale;
 
-      //    if (geo->triangulation == nullptr)
-      //        geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo,
-      //            geo->ellipticalDish.baseRadius, half_pi, 0.f, geo->ellipticalDish.height / geo->ellipticalDish.baseRadius, scale);
+          if (geo->triangulation == nullptr)
+              geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo,
+                  geo->ellipticalDish.baseRadius, half_pi, 0.f, geo->ellipticalDish.height / geo->ellipticalDish.baseRadius, scale);
 
-      //    TriangleCount = geo->triangulation->triangles_n;
+          TriangleCount = geo->triangulation->triangles_n;
 
-      //    shape = subshape;
+          shape = subshape;
 
-      //    geoname = "EllipticalDish " + std::to_string(GeoIndex) + " of ";
+          geoname = "EllipticalDish " + std::to_string(GeoIndex) + " of ";
 
-      //}
-      //break;
-      //case Geometry::Kind::SphericalDish:
+      }
+      break;
+      case Geometry::Kind::SphericalDish:
 
 
-      //{
-      //    std::shared_ptr<e5dFace_SphericalDish> subshape = std::make_shared<e5dFace_SphericalDish>();
-      //    subshape->baseRadius = geo->sphericalDish.baseRadius;
-      //    subshape->height = geo->sphericalDish.height;
+      {
+          std::shared_ptr<e5dFace_SphericalDish> subshape = std::make_shared<e5dFace_SphericalDish>();
+          subshape->baseRadius = geo->sphericalDish.baseRadius;
+          subshape->height = geo->sphericalDish.height;
 
-      //    subshape->scale = scale;
+          subshape->scale = scale;
 
-      //    if (geo->triangulation == nullptr)
-      //    {
-      //        float r_circ = geo->sphericalDish.baseRadius;
-      //        auto h = geo->sphericalDish.height;
-      //        float r_sphere = (r_circ * r_circ + h * h) / (2.f * h);
-      //        float sinval = std::min(1.f, std::max(-1.f, r_circ / r_sphere));
-      //        float arc = asin(sinval);
-      //        if (r_circ < h) { arc = pi - arc; }
-      //        geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo, r_sphere, arc, h - r_sphere, 1.f, scale);
-      //    }
+          if (geo->triangulation == nullptr)
+          {
+              float r_circ = geo->sphericalDish.baseRadius;
+              auto h = geo->sphericalDish.height;
+              float r_sphere = (r_circ * r_circ + h * h) / (2.f * h);
+              float sinval = std::min(1.f, std::max(-1.f, r_circ / r_sphere));
+              float arc = asin(sinval);
+              if (r_circ < h) { arc = pi - arc; }
+              geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo, r_sphere, arc, h - r_sphere, 1.f, scale);
+          }
 
-      //    TriangleCount = geo->triangulation->triangles_n;
+          TriangleCount = geo->triangulation->triangles_n;
 
-      //    shape = subshape;
+          shape = subshape;
 
-      //    geoname = "SphericalDish " + std::to_string(GeoIndex) + " of ";
+          geoname = "SphericalDish " + std::to_string(GeoIndex) + " of ";
 
-      //}
-      //break;
-      //case Geometry::Kind::Cylinder:
+      }
+      break;
+      case Geometry::Kind::Cylinder:
 
-      //{
-      //    std::shared_ptr<e5dFace_RvmCylinder> subshape = std::make_shared<e5dFace_RvmCylinder>();
-      //    subshape->radius = geo->cylinder.radius;
-      //    subshape->height = geo->cylinder.height;
+      {
+          std::shared_ptr<e5dFace_RvmCylinder> subshape = std::make_shared<e5dFace_RvmCylinder>();
+          subshape->radius = geo->cylinder.radius;
+          subshape->height = geo->cylinder.height;
 
-      //    subshape->scale = scale;
+          subshape->scale = scale;
 
-      //    if (geo->triangulation == nullptr)
-      //        geo->triangulation = factory->cylinder(&__store->arenaTriangulation, geo, scale);
+          if (geo->triangulation == nullptr)
+              geo->triangulation = factory->cylinder(&__store->arenaTriangulation, geo, scale);
 
-      //    TriangleCount = geo->triangulation->triangles_n;
+          TriangleCount = geo->triangulation->triangles_n;
 
-      //    shape = subshape;
+          shape = subshape;
 
-      //    geoname = "Cylinder " + std::to_string(GeoIndex) + " of ";
+          geoname = "Cylinder " + std::to_string(GeoIndex) + " of ";
 
-      //}
-      //break;
+      }
+      break;
 
-      //case Geometry::Kind::CircularTorus:
+      case Geometry::Kind::CircularTorus:
 
 
-      //{
-      //    std::shared_ptr<e5dFace_CircularTorus> subshape = std::make_shared<e5dFace_CircularTorus>();
-      //    subshape->radius = geo->circularTorus.radius;
-      //    subshape->angle = geo->circularTorus.angle;
-      //    subshape->offset = geo->circularTorus.offset;
+      {
+          std::shared_ptr<e5dFace_CircularTorus> subshape = std::make_shared<e5dFace_CircularTorus>();
+          subshape->radius = geo->circularTorus.radius;
+          subshape->angle = geo->circularTorus.angle;
+          subshape->offset = geo->circularTorus.offset;
 
-      //    subshape->scale = scale;
+          subshape->scale = scale;
 
-      //    if (geo->triangulation == nullptr)
-      //        geo->triangulation = factory->circularTorus(&__store->arenaTriangulation, geo, scale);
+          if (geo->triangulation == nullptr)
+              geo->triangulation = factory->circularTorus(&__store->arenaTriangulation, geo, scale);
 
-      //    TriangleCount = geo->triangulation->triangles_n;
+          TriangleCount = geo->triangulation->triangles_n;
 
-      //    shape = subshape;
+          shape = subshape;
 
-      //    geoname = "CircularTorus " + std::to_string(GeoIndex) + " of ";
+          geoname = "CircularTorus " + std::to_string(GeoIndex) + " of ";
 
-      //}
-      //break;
+      }
+      break;
 
-      //default:
-      //    assert(false && "Illegal kind");
-      //    break;
-      //}
+      default:
+          assert(false && "Illegal kind");
+          break;
+      }
 
-      //if (shape == nullptr)
-      //    return false;
+      if (shape == nullptr)
+          return false;
 
 
       if (TriangleCount == 0)
@@ -1079,7 +1079,7 @@ namespace ExportNamedPipe{
 
       std::string binstr;
 
-      //Shape2Binary(shape, binstr);
+      Shape2Binary(shape, binstr);
 
       std::string shapename = geoname + (instName ? std::string(instName) : "");
 
@@ -1251,7 +1251,7 @@ namespace ExportNamedPipe{
           };
           memcpy(worldMax, temp, sizeof(temp));
       }
-      int geometrytype = 0;// shape->type();
+      int geometrytype = shape->type();
       {
           CurrentBufferAddress = PipeDataBuffer + PipeDataBufferPos;
 
