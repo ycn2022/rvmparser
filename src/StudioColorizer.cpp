@@ -72,7 +72,7 @@ void StudioColorizer::init(Store& store)
 
 	std::ifstream file(full_path);
 	if (!file.is_open()) {
-		std::cerr << "错误：无法打开文件" << std::endl;
+		std::cerr << "错误：无法打开文件" << "rvmcolorindex.txt" << std::endl;
 		return;
 	}
 
