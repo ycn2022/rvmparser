@@ -206,10 +206,44 @@ namespace ExportEWC{
       return utf8Buf; // 调用者需 delete[] 释放
   }
 
+  char* unicodeToUtf8(const WCHAR* zWideFilename) {
+      int nByte = WideCharToMultiByte(CP_UTF8, 0, zWideFilename, -1, 0, 0, 0, 0);
+      char* zFilename = (char*)malloc(nByte);
+      WideCharToMultiByte(CP_UTF8, 0, zWideFilename, -1, zFilename, nByte, 0, 0);
+      return zFilename;
+  }
+
+  // 辅助函数：将ANSI路径转UTF-8
+  std::string AnsiToUTF8(const char* ansiPath) {
+      int wlen = MultiByteToWideChar(CP_ACP, 0, ansiPath, -1, NULL, 0);
+      wchar_t* wstr = new wchar_t[wlen];
+      MultiByteToWideChar(CP_ACP, 0, ansiPath, -1, wstr, wlen);
+
+      int ulen = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+      char* utf8Path = new char[ulen];
+      WideCharToMultiByte(CP_UTF8, 0, wstr, -1, utf8Path, ulen, NULL, NULL);
+
+      std::string result(utf8Path);
+      delete[] wstr;
+      delete[] utf8Path;
+      return result;
+  }
+
   std::wstring string_to_wstring(const std::string& str) {
-      int size_needed = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), NULL, 0);
+
+      std::string utf8path;
+      if (!IsValidUTF8(str.data()))
+      {
+          utf8path = AnsiToUTF8(str.data());
+      }
+      else
+      {
+          utf8path = str;
+      }
+
+      int size_needed = MultiByteToWideChar(CP_UTF8, 0, utf8path.c_str(), (int)utf8path.size(), NULL, 0);
       std::wstring result(size_needed, 0);
-      MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), &result[0], size_needed);
+      MultiByteToWideChar(CP_UTF8, 0, utf8path.c_str(), (int)utf8path.size(), &result[0], size_needed);
       return result;
   }
 
@@ -262,6 +296,7 @@ namespace ExportEWC{
 
   // 将文件移动到回收站
   bool MoveFileToRecycleBin(const std::string& filePath) {
+
       std::wstring wFilePath = string_to_wstring(filePath);
       
       // 确保路径以双空字符结尾（SHFileOperation要求）
@@ -434,6 +469,7 @@ namespace ExportEWC{
 
       if (!da.AddModel(utf8name, nodeId))
       {
+          ctx.logger(2, "add model failed: %s", utf8name.c_str());
           return false;
       }
       if (!da.UpdateInstanceBoundingBox(nodeId,
@@ -1035,18 +1071,18 @@ namespace ExportEWC{
       };
       std::string matrixstr;
       
-      if (Matrix[0] != 1 ||
-          Matrix[0] != 0 ||
-          Matrix[0] != 0 ||
-          Matrix[0] != 0 ||
-          Matrix[0] != 0 ||
-          Matrix[0] != 1 ||
-          Matrix[0] != 0 ||
-          Matrix[0] != 0 ||
-          Matrix[0] != 0 ||
-          Matrix[0] != 0 ||
-          Matrix[0] != 1 ||
-          Matrix[0] != 0)
+      if (Matrix[0] != 1.0 ||
+          Matrix[1] != 0.0 ||
+          Matrix[2] != 0.0 ||
+          Matrix[3] != 0.0 ||
+          Matrix[4] != 0.0 ||
+          Matrix[5] != 1.0 ||
+          Matrix[6] != 0.0 ||
+          Matrix[7] != 0.0 ||
+          Matrix[8] != 0.0 ||
+          Matrix[9] != 0.0 ||
+          Matrix[10] != 1.0 ||
+          Matrix[11] != 0.0)
       {
           matrixstr = "[" +
               doubleToString(Matrix[0]) + "," + doubleToString(Matrix[1]) + "," +
@@ -1054,8 +1090,17 @@ namespace ExportEWC{
               doubleToString(Matrix[4]) + "," + doubleToString(Matrix[5]) + "," +
               doubleToString(Matrix[6]) + "," + doubleToString(Matrix[7]) + "," +
               doubleToString(Matrix[8]) + "," + doubleToString(Matrix[9]) + "," +
-              doubleToString(Matrix[10]) + "," + doubleToString(Matrix[11]) + "," +
+              doubleToString(Matrix[10]) + "," + doubleToString(Matrix[11]) +
               ",0,0,0,1]";
+
+          if (!IsValidUTF8(matrixstr.data()))
+          {
+              auto utf8matrix = ConvertToUTF8(matrixstr.data());
+
+              matrixstr = std::string(utf8matrix);
+
+              delete utf8matrix;
+          }
       }
 
 
@@ -1365,8 +1410,13 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
         ctx.logger(1, "EWC文件初始大小: %zu bytes", static_cast<size_t>(TempDbFileSize));
     }
 
+    if(!IsValidUTF8(ewcfilename.data()))
+    {
+        ewcfilename = AnsiToUTF8(ewcfilename.data());
+    }
+
     E5D::Studio::DataAccess da;
-    da.E5dDbPath = ewcfilename;
+    da.E5dDbPath =  ewcfilename;
     if (!da.OpenLocalDatabase())
     {
         ctx.logger(2, "打开ewc文件失败: %s", ewcfilename.c_str());
