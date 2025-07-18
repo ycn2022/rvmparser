@@ -754,7 +754,7 @@ int main(int argc, char** argv)
   }
 
   auto time0 = std::chrono::high_resolution_clock::now();
-  if (exportNamedPipe(store, logger, pipename))
+  if (exportEWC(store, logger, filename))
   {
       long long e = std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
       logger(0, "Exported  in %lldms", e);

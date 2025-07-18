@@ -104,13 +104,15 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\libs\libtess2\include;$(ProjectDir)..\libs\rapidjson\include;D:\01Work\e5d-studio\studio-unreal\Refs\cereal-UE4\include\cereal\include;D:\01Work\e5d-studio\studio-unreal\Refs\e5d_Shape\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\01Work\Github\ycn2022\rvmparser\DataAccess\include;$(ProjectDir)..\libs\libtess2\include;$(ProjectDir)..\libs\rapidjson\include;D:\01Work\e5d-studio\studio-unreal\Refs\cereal-UE4\include\cereal\include;D:\01Work\e5d-studio\studio-unreal\Refs\e5d_Shape\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>D:\01Work\Github\ycn2022\rvmparser\DataAccess\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>E5DDataAccessLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -168,6 +170,7 @@
     <ClCompile Include="..\src\Connect.cpp" />
     <ClCompile Include="..\src\DiscardGroups.cpp" />
     <ClCompile Include="..\src\DumpNames.cpp" />
+    <ClCompile Include="..\src\ExportEWC.cpp" />
     <ClCompile Include="..\src\ExportGLTF.cpp" />
     <ClCompile Include="..\src\ExportJson.cpp" />
     <ClCompile Include="..\src\ExportNamedPipe.cpp" />
