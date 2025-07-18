@@ -162,6 +162,9 @@ namespace ExportEWC{
       bool done = false;  // Set to true when there are no more splits
     } split;
 
+    int processedgroupnum = 0;
+    int totalgroupnum = 0;
+
     bool centerModel = true;
     bool rotateZToY = true;
     bool includeAttributes = false;
@@ -253,11 +256,11 @@ namespace ExportEWC{
           std::ostringstream oss;
           oss << std::hex << std::uppercase
               << std::setfill('0')
-              << std::setw(8) << guid.Data1 << "-"
-              << std::setw(4) << guid.Data2 << "-"
-              << std::setw(4) << guid.Data3 << "-"
+              << std::setw(8) << guid.Data1 
+              << std::setw(4) << guid.Data2 
+              << std::setw(4) << guid.Data3 
               << std::setw(2) << static_cast<int>(guid.Data4[0])
-              << std::setw(2) << static_cast<int>(guid.Data4[1]) << "-"
+              << std::setw(2) << static_cast<int>(guid.Data4[1]) 
               << std::setw(2) << static_cast<int>(guid.Data4[2])
               << std::setw(2) << static_cast<int>(guid.Data4[3])
               << std::setw(2) << static_cast<int>(guid.Data4[4])
@@ -1306,6 +1309,14 @@ namespace ExportEWC{
 
               }
           }
+
+          ctx.processedgroupnum++;
+
+          if (ctx.processedgroupnum % 1000 == 0)
+          {
+              ctx.logger(0, "processed %d / %d", ctx.processedgroupnum, ctx.totalgroupnum);
+          }
+
       }
           break;
 
@@ -1324,19 +1335,20 @@ namespace ExportEWC{
   }
 
 
-  void extendBounds(BBox3f& worldBounds, Node* node)
+  void extendBounds(Context& ctx, BBox3f& worldBounds, Node* node)
   {
       BBox3f nodeBounds = createEmptyBBox3f();
-    for (Node* child = node->children.first; child; child = child->next) {
-      extendBounds(nodeBounds, child);
-    }
-    if (node->kind == Node::Kind::Group) {
-      for (Geometry* geo = node->group.geometries.first; geo; geo = geo->next) {
-        engulf(nodeBounds, geo->bboxWorld);
+      for (Node* child = node->children.first; child; child = child->next) {
+          extendBounds(ctx, nodeBounds, child);
       }
-    }
-    node->bboxWorld = nodeBounds;
-    engulf(worldBounds, nodeBounds);
+      if (node->kind == Node::Kind::Group) {
+          ctx.totalgroupnum++;
+          for (Geometry* geo = node->group.geometries.first; geo; geo = geo->next) {
+              engulf(nodeBounds, geo->bboxWorld);
+          }
+      }
+      node->bboxWorld = nodeBounds;
+      engulf(worldBounds, nodeBounds);
   }
 
   //void calculateOrigin(Context& ctx, Model& model, Node* firstNode)
@@ -1440,7 +1452,7 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
 
     BBox3f worldBounds = createEmptyBBox3f();
 
-    extendBounds(worldBounds, store->getFirstRoot());
+    extendBounds(ctx, worldBounds, store->getFirstRoot());
 
     __store = store;
 
