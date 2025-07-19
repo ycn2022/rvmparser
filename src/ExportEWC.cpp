@@ -88,6 +88,7 @@ namespace ExportEWC{
         double WorldMin[3];
         double WorldMax[3];
         double Matrix[12];
+        std::string MatrixStr;
         int GeometryType = 0;
         int TriangleCount = 0;
         std::string Geometry;
@@ -124,6 +125,10 @@ namespace ExportEWC{
 
     //每次发送4M数据
     int PipeDataBufferLen = 1024 * 1024 * 4;
+
+    //复用内存，用来序列化shape。初始10M。不够的话就扩容
+    char* geometrystr = nullptr;
+    int geometrystrlength = 1024 * 1024 * 10;
 
     Map definedMaterials;
 
@@ -177,6 +182,16 @@ namespace ExportEWC{
     long long sqliteopetimes = 0;
 
     long long writelog = 0;
+
+    int modelnum = 0;
+    int instancenum = 0;
+    int shapenum = 0;
+    int materialnum = 0;
+
+    std::vector< ModelData> model;
+    std::vector<InstanceData> instances;
+    std::vector<ShapeData> shapes;
+    std::vector<E5D::Studio::BaseMaterial>materials;
 
 
     bool centerModel = true;
@@ -484,16 +499,22 @@ namespace ExportEWC{
 
       utf8name = std::filesystem::path(utf8name).filename().string();
 
+      //ModelData model;
+      //model.Id = nodeId;
+      //model.Min[0] = node->bboxWorld.min.x;
+      //model.Min[1] = node->bboxWorld.min.y;
+      //model.Min[2] = node->bboxWorld.min.z;
+      //model.Max[0] = node->bboxWorld.max.x;
+      //model.Max[1] = node->bboxWorld.max.y;
+      //model.Max[2] = node->bboxWorld.max.z;
+      //model.Name = utf8name;
+      //ctx.model.push_back(model);
+
       auto time0 = std::chrono::high_resolution_clock::now();
 
 #if !NOTWRITEDB
 
-      if (!da.AddModel(utf8name, nodeId))
-      {
-          ctx.logger(2, "add model failed: %s", utf8name.c_str());
-          return false;
-      }
-      if (!da.UpdateInstanceBoundingBox(nodeId,
+      if (!da.AddModel(utf8name, nodeId,
           node->bboxWorld.min.x,
           node->bboxWorld.min.y,
           node->bboxWorld.min.z,
@@ -501,9 +522,20 @@ namespace ExportEWC{
           node->bboxWorld.max.y,
           node->bboxWorld.max.z))
       {
-          ctx.logger(2, "update boundbox failed: %s", utf8name.c_str());
+          ctx.logger(2, "add model failed: %s", utf8name.c_str());
           return false;
       }
+      //if (!da.UpdateInstanceBoundingBox(nodeId,
+      //    node->bboxWorld.min.x,
+      //    node->bboxWorld.min.y,
+      //    node->bboxWorld.min.z,
+      //    node->bboxWorld.max.x,
+      //    node->bboxWorld.max.y,
+      //    node->bboxWorld.max.z))
+      //{
+      //    ctx.logger(2, "update boundbox failed: %s", utf8name.c_str());
+      //    return false;
+      //}
 #endif
       
       long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
@@ -558,16 +590,26 @@ namespace ExportEWC{
           utf8Data = nullptr;
       }
 
+      InstanceData inst;
+      inst.Id = nodeId;
+      inst.IsSignificant = isSignificant;
+      inst.Min[0] = bboxWorld.min.x;
+      inst.Min[1] = bboxWorld.min.y;
+      inst.Min[2] = bboxWorld.min.z;
+      inst.Max[0] = bboxWorld.max.x;
+      inst.Max[1] = bboxWorld.max.y;
+      inst.Max[2] = bboxWorld.max.z;
+      inst.Name = utf8name;
+      inst.ParentId = parentId;
+      ctx.instances.push_back(inst);
+      
+
+
       auto time0 = std::chrono::high_resolution_clock::now();
 
 #if !NOTWRITEDB
 
-      if (!da.AddInstance(nodeId, E5D::Studio::DataAccess::ComponentClassId, utf8name, "", isSignificant))
-      {
-          ctx.logger(2, "add instance failed: %s", utf8name.c_str());
-          return false;
-      }
-      if (!da.UpdateInstanceBoundingBox(nodeId,
+      if (!da.AddInstance(nodeId, E5D::Studio::DataAccess::ComponentClassId, utf8name, nullptr, isSignificant,
           bboxWorld.min.x,
           bboxWorld.min.y,
           bboxWorld.min.z,
@@ -575,9 +617,20 @@ namespace ExportEWC{
           bboxWorld.max.y,
           bboxWorld.max.z))
       {
-          ctx.logger(2, "update boundbox failed: %s", utf8name.c_str());
+          ctx.logger(2, "add instance failed: %s", utf8name.c_str());
           return false;
       }
+      //if (!da.UpdateInstanceBoundingBox(nodeId,
+      //    bboxWorld.min.x,
+      //    bboxWorld.min.y,
+      //    bboxWorld.min.z,
+      //    bboxWorld.max.x,
+      //    bboxWorld.max.y,
+      //    bboxWorld.max.z))
+      //{
+      //    ctx.logger(2, "update boundbox failed: %s", utf8name.c_str());
+      //    return false;
+      //}
       if (!da.AddAsso(parentId, nodeId, E5D::Studio::DataAccess::TreeAssoId))
       {
           ctx.logger(2, "add asso failed: %s", utf8name.c_str());
@@ -684,6 +737,18 @@ namespace ExportEWC{
           mat.metallic = metallic;
           mat.roughness = roughness;
 
+          //MaterialData matdata;
+          //matdata.Id = matId;
+          //matdata.Diffuse[0] = r;
+          //matdata.Diffuse[1] = g;
+          //matdata.Diffuse[2] = b;
+          //matdata.Dissolve = dissolve;
+          //matdata.Metallic = metallic;
+          //matdata.Roughness = roughness;
+
+          ctx.materials.push_back(mat);
+          
+
 
           auto time0 = std::chrono::high_resolution_clock::now();
 
@@ -762,7 +827,14 @@ namespace ExportEWC{
 
       auto time0 = std::chrono::high_resolution_clock::now();
 
-      std::shared_ptr< e5d_Shape> shape = nullptr;
+      //std::shared_ptr< e5d_Shape> shape = nullptr;
+
+      //std::ostringstream geometrystr;
+      //geometrystr.sync_with_stdio(false); // 禁用与 stdio 的同步
+
+      int geometrytype = 0;
+
+      size_t geosize = 0;
 
 #if !NOTPARSESHAPE
 
@@ -770,33 +842,92 @@ namespace ExportEWC{
 
       case Geometry::Kind::Pyramid:
       {
-          std::shared_ptr<e5dFace_Pyramid> subshape = std::make_shared<e5dFace_Pyramid>();
-          subshape->top[0] = geo->pyramid.top[0];
-          subshape->top[1] = geo->pyramid.top[1];
-          subshape->bottom[0] = geo->pyramid.bottom[0];
-          subshape->bottom[1] = geo->pyramid.bottom[1];
-          subshape->offset[0] = geo->pyramid.offset[0];
-          subshape->offset[1] = geo->pyramid.offset[1];
-          subshape->height = geo->pyramid.height;
+          //std::shared_ptr<e5dFace_Pyramid> subshape = std::make_shared<e5dFace_Pyramid>();
+          //subshape->top[0] = geo->pyramid.top[0];
+          //subshape->top[1] = geo->pyramid.top[1];
+          //subshape->bottom[0] = geo->pyramid.bottom[0];
+          //subshape->bottom[1] = geo->pyramid.bottom[1];
+          //subshape->offset[0] = geo->pyramid.offset[0];
+          //subshape->offset[1] = geo->pyramid.offset[1];
+          //subshape->height = geo->pyramid.height;
+
+          geometrytype = e5dFace_Pyramid::ID;
+
+          geosize = sizeof(geometrytype) + sizeof(geo->pyramid);
+
+          if (geometrystrlength < geosize)
+          {
+              geometrystrlength = geosize;
+              if (geometrystr != nullptr)
+              {
+                  delete[] geometrystr;
+                  geometrystr = nullptr;
+              }
+          }
+
+          if (geometrystr == nullptr)
+              geometrystr = new char[geometrystrlength];
+
+          size_t pos = 0;
+          memcpy(geometrystr, &geometrytype, sizeof(geometrytype));
+          pos += sizeof(geometrytype);
+          memcpy(geometrystr + pos, &geo->pyramid, sizeof(geo->pyramid));
+
+
+          //geometrystr << geometrytype;
+          //geometrystr << geo->pyramid.top[0];
+          //geometrystr << geo->pyramid.top[1];
+          //geometrystr << geo->pyramid.bottom[0];
+          //geometrystr << geo->pyramid.bottom[1];
+          //geometrystr << geo->pyramid.offset[0];
+          //geometrystr << geo->pyramid.offset[1];
+          //geometrystr << geo->pyramid.height;
 
           if (geo->triangulation == nullptr)
               geo->triangulation = factory->pyramid(&__store->arenaTriangulation, geo, scale);
 
           TriangleCount = geo->triangulation->triangles_n;
 
-          shape = subshape;
+          //shape = subshape;
 
           geoname = "Pyramid " + std::to_string(GeoIndex) + " of ";
 
       }
       break;
       case Geometry::Kind::Box:
-
       {
-          std::shared_ptr<e5dFace_RvmBox> subshape = std::make_shared<e5dFace_RvmBox>();
-          subshape->lengthx = geo->box.lengths[0];
-          subshape->lengthy = geo->box.lengths[1];
-          subshape->lengthz = geo->box.lengths[2];
+          //std::shared_ptr<e5dFace_RvmBox> subshape = std::make_shared<e5dFace_RvmBox>();
+          //subshape->lengthx = geo->box.lengths[0];
+          //subshape->lengthy = geo->box.lengths[1];
+          //subshape->lengthz = geo->box.lengths[2];
+
+          geometrytype = e5dFace_RvmBox::ID;
+
+
+          geosize = sizeof(geometrytype) + sizeof(geo->box);
+
+          if (geometrystrlength < geosize)
+          {
+              geometrystrlength = geosize;
+              if (geometrystr != nullptr)
+              {
+                  delete[] geometrystr;
+                  geometrystr = nullptr;
+              }
+          }
+
+          if (geometrystr == nullptr)
+              geometrystr = new char[geometrystrlength];
+
+          size_t pos = 0;
+          memcpy(geometrystr, &geometrytype, sizeof(geometrytype));
+          pos += sizeof(geometrytype);
+          memcpy(geometrystr + pos, &geo->box, sizeof(geo->box));
+
+          //geometrystr << geometrytype;
+          //geometrystr << geo->box.lengths[0];
+          //geometrystr << geo->box.lengths[1];
+          //geometrystr << geo->box.lengths[2];
 
           if (geo->triangulation == nullptr)
               geo->triangulation = factory->box(&__store->arenaTriangulation, geo, scale);
@@ -804,7 +935,7 @@ namespace ExportEWC{
           TriangleCount = geo->triangulation->triangles_n;
           //TriangleCount = 12;
 
-          shape = subshape;
+          //shape = subshape;
 
           geoname = "Box " + std::to_string(GeoIndex) + " of ";
 
@@ -812,20 +943,52 @@ namespace ExportEWC{
       break;
       case Geometry::Kind::RectangularTorus:
       {
-          std::shared_ptr<e5dFace_RectangularTorus> subshape = std::make_shared<e5dFace_RectangularTorus>();
-          subshape->angle = geo->rectangularTorus.angle;
-          subshape->height = geo->rectangularTorus.height;
-          subshape->inner_radius = geo->rectangularTorus.inner_radius;
-          subshape->outer_radius = geo->rectangularTorus.outer_radius;
+          //std::shared_ptr<e5dFace_RectangularTorus> subshape = std::make_shared<e5dFace_RectangularTorus>();
+          //subshape->angle = geo->rectangularTorus.angle;
+          //subshape->height = geo->rectangularTorus.height;
+          //subshape->inner_radius = geo->rectangularTorus.inner_radius;
+          //subshape->outer_radius = geo->rectangularTorus.outer_radius;
 
-          subshape->scale = scale;
+          //subshape->scale = scale;
+
+          geometrytype = e5dFace_RectangularTorus::ID;
+
+
+          geosize = sizeof(geometrytype) + sizeof(geo->rectangularTorus) + sizeof(scale);
+
+          if (geometrystrlength < geosize)
+          {
+              geometrystrlength = geosize;
+              if (geometrystr != nullptr)
+              {
+                  delete[] geometrystr;
+                  geometrystr = nullptr;
+              }
+          }
+
+          if (geometrystr == nullptr)
+              geometrystr = new char[geometrystrlength];
+
+          size_t pos = 0;
+          memcpy(geometrystr, &geometrytype, sizeof(geometrytype));
+          pos += sizeof(geometrytype);
+          memcpy(geometrystr + pos, &geo->rectangularTorus, sizeof(geo->rectangularTorus));
+          pos += sizeof(geo->rectangularTorus);
+          memcpy(geometrystr + pos, &scale, sizeof(scale));
+
+          //geometrystr << geometrytype;
+          //geometrystr << geo->rectangularTorus.angle;
+          //geometrystr << geo->rectangularTorus.height;
+          //geometrystr << geo->rectangularTorus.inner_radius;
+          //geometrystr << geo->rectangularTorus.outer_radius;
+          //geometrystr << scale;
 
           if (geo->triangulation == nullptr)
               geo->triangulation = factory->rectangularTorus(&__store->arenaTriangulation, geo, scale);
 
           TriangleCount = geo->triangulation->triangles_n;
 
-          shape = subshape;
+          //shape = subshape;
 
           geoname = "RectangularTorus " + std::to_string(GeoIndex) + " of ";
 
@@ -833,17 +996,46 @@ namespace ExportEWC{
       break;
       case Geometry::Kind::Sphere:
       {
-          std::shared_ptr<e5dFace_RvmSphere> subshape = std::make_shared<e5dFace_RvmSphere>();
-          subshape->diameter = geo->sphere.diameter;
+          //std::shared_ptr<e5dFace_RvmSphere> subshape = std::make_shared<e5dFace_RvmSphere>();
+          //subshape->diameter = geo->sphere.diameter;
 
-          subshape->scale = scale;
+          //subshape->scale = scale;
+
+          geometrytype = e5dFace_RvmSphere::ID;
+
+
+          geosize = sizeof(geometrytype) + sizeof(geo->sphere) + sizeof(scale);
+
+          if (geometrystrlength < geosize)
+          {
+              geometrystrlength = geosize;
+              if (geometrystr != nullptr)
+              {
+                  delete[] geometrystr;
+                  geometrystr = nullptr;
+              }
+          }
+
+          if (geometrystr == nullptr)
+              geometrystr = new char[geometrystrlength];
+
+          size_t pos = 0;
+          memcpy(geometrystr, &geometrytype, sizeof(geometrytype));
+          pos += sizeof(geometrytype);
+          memcpy(geometrystr + pos, &geo->sphere, sizeof(geo->sphere));
+          pos += sizeof(geo->sphere);
+          memcpy(geometrystr + pos, &scale, sizeof(scale));
+
+          //geometrystr << geometrytype;
+          //geometrystr << geo->sphere.diameter;
+          //geometrystr << scale;
 
           if (geo->triangulation == nullptr)
               geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo, 0.5f * geo->sphere.diameter, pi, 0.f, 1.f, scale);
 
           TriangleCount = geo->triangulation->triangles_n;
 
-          shape = subshape;
+          //shape = subshape;
 
           geoname = "Sphere " + std::to_string(GeoIndex) + " of ";
 
@@ -852,40 +1044,96 @@ namespace ExportEWC{
       case Geometry::Kind::Line:
           break;
       case Geometry::Kind::FacetGroup:
-
       {
-          auto scale = getScale(geo->M_3x4);
+
           if (geo->triangulation == nullptr)
               geo->triangulation = factory->facetGroup(&__store->arenaTriangulation, geo, scale);
 
 
           auto time0 = std::chrono::high_resolution_clock::now();
 
+          geometrytype = e5d_Mesh::ID;
 
-          std::shared_ptr<e5d_Mesh> subshape = std::make_shared<e5d_Mesh>();
-          for (size_t i = 0; i < geo->triangulation->vertices_n; i++)
+
+
+          geosize = sizeof(geometrytype) + sizeof(geo->triangulation->vertices_n) +
+              sizeof(float) * geo->triangulation->vertices_n * 6+
+              sizeof(geo->triangulation->triangles_n) +
+              sizeof(uint32_t) * geo->triangulation->triangles_n * 3;
+
+          if (geometrystrlength < geosize)
           {
+              geometrystrlength = geosize;
+              if (geometrystr != nullptr)
               {
-                  std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
-                  vt->x = geo->triangulation->vertices[i * 3];
-                  vt->y = geo->triangulation->vertices[i * 3 + 1];
-                  vt->z = geo->triangulation->vertices[i * 3 + 2];
-                  subshape->postions.push_back(vt);
-              }
-              {
-                  std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
-                  vt->x = geo->triangulation->normals[i * 3];
-                  vt->y = geo->triangulation->normals[i * 3 + 1];
-                  vt->z = geo->triangulation->normals[i * 3 + 2];
-                  subshape->normals.push_back(vt);
+                  delete[] geometrystr;
+                  geometrystr = nullptr;
               }
           }
-          for (size_t i = 0; i < geo->triangulation->triangles_n; i++)
-          {
-              subshape->faces.push_back(geo->triangulation->indices[i * 3]);
-              subshape->faces.push_back(geo->triangulation->indices[i * 3 + 1]);
-              subshape->faces.push_back(geo->triangulation->indices[i * 3 + 2]);
-          }
+
+          if (geometrystr == nullptr)
+              geometrystr = new char[geometrystrlength];
+
+          size_t pos = 0;
+          memcpy(geometrystr, &geometrytype, sizeof(geometrytype));
+          pos += sizeof(geometrytype);
+          memcpy(geometrystr+ pos, &geo->triangulation->vertices_n, sizeof(geo->triangulation->vertices_n));
+          pos += sizeof(geo->triangulation->vertices_n);
+
+          memcpy(geometrystr + pos, geo->triangulation->vertices, sizeof(float)* geo->triangulation->vertices_n * 3);
+          pos += sizeof(float) * geo->triangulation->vertices_n * 3;
+          memcpy(geometrystr + pos, geo->triangulation->normals, sizeof(float)* geo->triangulation->vertices_n * 3);
+          pos += sizeof(float) * geo->triangulation->vertices_n * 3;
+
+          memcpy(geometrystr + pos, &geo->triangulation->triangles_n, sizeof(geo->triangulation->triangles_n));
+          pos += sizeof(geo->triangulation->triangles_n);
+
+          memcpy(geometrystr + pos, geo->triangulation->indices, sizeof(uint32_t)* geo->triangulation->triangles_n * 3);
+          pos += sizeof(uint32_t) * geo->triangulation->triangles_n * 3;
+
+          //geometrystr << geometrytype;
+          //geometrystr << geo->triangulation->vertices_n;
+          //for (size_t i = 0; i < geo->triangulation->vertices_n; i++)
+          //{
+          //    geometrystr << geo->triangulation->vertices[i * 3];
+          //    geometrystr << geo->triangulation->vertices[i * 3 + 1];
+          //    geometrystr << geo->triangulation->vertices[i * 3 + 2];
+          //    geometrystr << geo->triangulation->normals[i * 3];
+          //    geometrystr << geo->triangulation->normals[i * 3 + 1];
+          //    geometrystr << geo->triangulation->normals[i * 3 + 2];
+          //}
+          //geometrystr << geo->triangulation->triangles_n;
+          //for (size_t i = 0; i < geo->triangulation->triangles_n; i++)
+          //{
+          //    geometrystr << geo->triangulation->indices[i * 3];
+          //    geometrystr << geo->triangulation->indices[i * 3 + 1];
+          //    geometrystr << geo->triangulation->indices[i * 3 + 2];
+          //}
+
+          //std::shared_ptr<e5d_Mesh> subshape = std::make_shared<e5d_Mesh>();
+          //for (size_t i = 0; i < geo->triangulation->vertices_n; i++)
+          //{
+          //    {
+          //        std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
+          //        vt->x = geo->triangulation->vertices[i * 3];
+          //        vt->y = geo->triangulation->vertices[i * 3 + 1];
+          //        vt->z = geo->triangulation->vertices[i * 3 + 2];
+          //        subshape->postions.push_back(vt);
+          //    }
+          //    {
+          //        std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
+          //        vt->x = geo->triangulation->normals[i * 3];
+          //        vt->y = geo->triangulation->normals[i * 3 + 1];
+          //        vt->z = geo->triangulation->normals[i * 3 + 2];
+          //        subshape->normals.push_back(vt);
+          //    }
+          //}
+          //for (size_t i = 0; i < geo->triangulation->triangles_n; i++)
+          //{
+          //    subshape->faces.push_back(geo->triangulation->indices[i * 3]);
+          //    subshape->faces.push_back(geo->triangulation->indices[i * 3 + 1]);
+          //    subshape->faces.push_back(geo->triangulation->indices[i * 3 + 2]);
+          //}
 
           long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
           //ctx.logger(1, "FacetGroup parse  in %lldms", e / 1000000);
@@ -894,7 +1142,7 @@ namespace ExportEWC{
           TriangleCount = geo->triangulation->triangles_n;
           //TriangleCount = subshape->faces.size();
 
-          shape = subshape;
+          //shape = subshape;
 
           geoname = "FacetGroup " + std::to_string(GeoIndex) + " of ";
 
@@ -903,25 +1151,62 @@ namespace ExportEWC{
 
       case Geometry::Kind::Snout:
       {
-          std::shared_ptr<e5dFace_Snout> subshape = std::make_shared<e5dFace_Snout>();
-          subshape->radius_t = geo->snout.radius_t;
-          subshape->tshear[0] = geo->snout.tshear[0];
-          subshape->tshear[1] = geo->snout.tshear[1];
-          subshape->radius_b = geo->snout.radius_b;
-          subshape->bshear[0] = geo->snout.bshear[0];
-          subshape->bshear[1] = geo->snout.bshear[1];
-          subshape->height = geo->snout.height;
-          subshape->offset[0] = geo->snout.offset[0];
-          subshape->offset[1] = geo->snout.offset[1];
+          //std::shared_ptr<e5dFace_Snout> subshape = std::make_shared<e5dFace_Snout>();
+          //subshape->radius_t = geo->snout.radius_t;
+          //subshape->tshear[0] = geo->snout.tshear[0];
+          //subshape->tshear[1] = geo->snout.tshear[1];
+          //subshape->radius_b = geo->snout.radius_b;
+          //subshape->bshear[0] = geo->snout.bshear[0];
+          //subshape->bshear[1] = geo->snout.bshear[1];
+          //subshape->height = geo->snout.height;
+          //subshape->offset[0] = geo->snout.offset[0];
+          //subshape->offset[1] = geo->snout.offset[1];
 
-          subshape->scale = scale;
+          //subshape->scale = scale;
+
+
+          geometrytype = e5dFace_Snout::ID;
+
+          geosize = sizeof(geometrytype) + sizeof(geo->snout) + sizeof(scale);
+
+          if (geometrystrlength < geosize)
+          {
+              geometrystrlength = geosize;
+              if (geometrystr != nullptr)
+              {
+                  delete[] geometrystr;
+                  geometrystr = nullptr;
+              }
+          }
+
+          if (geometrystr == nullptr)
+              geometrystr = new char[geometrystrlength];
+
+          size_t pos = 0;
+          memcpy(geometrystr, &geometrytype, sizeof(geometrytype));
+          pos += sizeof(geometrytype);
+          memcpy(geometrystr + pos, &geo->snout, sizeof(geo->snout));
+          pos += sizeof(geo->snout);
+          memcpy(geometrystr + pos, &scale, sizeof(scale));
+
+          //geometrystr << geometrytype;
+          //geometrystr << geo->snout.radius_t;
+          //geometrystr << geo->snout.tshear[0];
+          //geometrystr << geo->snout.tshear[1];
+          //geometrystr << geo->snout.radius_b;
+          //geometrystr << geo->snout.bshear[0];
+          //geometrystr << geo->snout.bshear[1];
+          //geometrystr << geo->snout.height;
+          //geometrystr <<  geo->snout.offset[0];
+          //geometrystr <<  geo->snout.offset[1];
+          //geometrystr << scale;
 
           if (geo->triangulation == nullptr)
               geo->triangulation = factory->snout(&__store->arenaTriangulation, geo, scale);
 
           TriangleCount = geo->triangulation->triangles_n;
 
-          shape = subshape;
+          //shape = subshape;
 
           geoname = "Snout " + std::to_string(GeoIndex) + " of ";
 
@@ -930,11 +1215,42 @@ namespace ExportEWC{
       case Geometry::Kind::EllipticalDish:
 
       {
-          std::shared_ptr<e5dFace_EllipticalDish> subshape = std::make_shared<e5dFace_EllipticalDish>();
-          subshape->baseRadius = geo->ellipticalDish.baseRadius;
-          subshape->height = geo->ellipticalDish.height;
+          //std::shared_ptr<e5dFace_EllipticalDish> subshape = std::make_shared<e5dFace_EllipticalDish>();
+          //subshape->baseRadius = geo->ellipticalDish.baseRadius;
+          //subshape->height = geo->ellipticalDish.height;
 
-          subshape->scale = scale;
+          //subshape->scale = scale;
+
+
+          geometrytype = e5dFace_EllipticalDish::ID;
+
+          geosize = sizeof(geometrytype) + sizeof(geo->ellipticalDish) + sizeof(scale);
+
+          if (geometrystrlength < geosize)
+          {
+              geometrystrlength = geosize;
+              if (geometrystr != nullptr)
+              {
+                  delete[] geometrystr;
+                  geometrystr = nullptr;
+              }
+          }
+
+          if (geometrystr == nullptr)
+              geometrystr = new char[geometrystrlength];
+
+          size_t pos = 0;
+          memcpy(geometrystr, &geometrytype, sizeof(geometrytype));
+          pos += sizeof(geometrytype);
+          memcpy(geometrystr + pos, &geo->ellipticalDish, sizeof(geo->ellipticalDish));
+          pos += sizeof(geo->ellipticalDish);
+          memcpy(geometrystr + pos, &scale, sizeof(scale));
+
+          //geometrystr << geometrytype;
+          //geometrystr << geo->ellipticalDish.baseRadius;
+          //geometrystr << geo->ellipticalDish.height;
+
+          //geometrystr << scale;
 
           if (geo->triangulation == nullptr)
               geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo,
@@ -942,21 +1258,49 @@ namespace ExportEWC{
 
           TriangleCount = geo->triangulation->triangles_n;
 
-          shape = subshape;
+          //shape = subshape;
 
           geoname = "EllipticalDish " + std::to_string(GeoIndex) + " of ";
 
       }
       break;
       case Geometry::Kind::SphericalDish:
-
-
       {
-          std::shared_ptr<e5dFace_SphericalDish> subshape = std::make_shared<e5dFace_SphericalDish>();
-          subshape->baseRadius = geo->sphericalDish.baseRadius;
-          subshape->height = geo->sphericalDish.height;
+          //std::shared_ptr<e5dFace_SphericalDish> subshape = std::make_shared<e5dFace_SphericalDish>();
+          //subshape->baseRadius = geo->sphericalDish.baseRadius;
+          //subshape->height = geo->sphericalDish.height;
 
-          subshape->scale = scale;
+          //subshape->scale = scale;
+
+          geometrytype = e5dFace_SphericalDish::ID;
+
+          geosize = sizeof(geometrytype) + sizeof(geo->sphericalDish) + sizeof(scale);
+
+          if (geometrystrlength < geosize)
+          {
+              geometrystrlength = geosize;
+              if (geometrystr != nullptr)
+              {
+                  delete[] geometrystr;
+                  geometrystr = nullptr;
+              }
+          }
+
+          if (geometrystr == nullptr)
+              geometrystr = new char[geometrystrlength];
+
+          size_t pos = 0;
+          memcpy(geometrystr, &geometrytype, sizeof(geometrytype));
+          pos += sizeof(geometrytype);
+          memcpy(geometrystr + pos, &geo->sphericalDish, sizeof(geo->sphericalDish));
+          pos += sizeof(geo->sphericalDish);
+          memcpy(geometrystr + pos, &scale, sizeof(scale));
+
+          //geometrystr << geometrytype;
+          //geometrystr << geo->sphericalDish.baseRadius;
+          //geometrystr << geo->sphericalDish.height;
+
+          //geometrystr << scale;
 
           if (geo->triangulation == nullptr)
           {
@@ -971,7 +1315,7 @@ namespace ExportEWC{
 
           TriangleCount = geo->triangulation->triangles_n;
 
-          shape = subshape;
+          //shape = subshape;
 
           geoname = "SphericalDish " + std::to_string(GeoIndex) + " of ";
 
@@ -980,18 +1324,48 @@ namespace ExportEWC{
       case Geometry::Kind::Cylinder:
 
       {
-          std::shared_ptr<e5dFace_RvmCylinder> subshape = std::make_shared<e5dFace_RvmCylinder>();
-          subshape->radius = geo->cylinder.radius;
-          subshape->height = geo->cylinder.height;
+          //std::shared_ptr<e5dFace_RvmCylinder> subshape = std::make_shared<e5dFace_RvmCylinder>();
+          //subshape->radius = geo->cylinder.radius;
+          //subshape->height = geo->cylinder.height;
 
-          subshape->scale = scale;
+          //subshape->scale = scale;
+
+          geometrytype = e5dFace_RvmCylinder::ID;
+
+          geosize = sizeof(geometrytype) + sizeof(geo->cylinder) + sizeof(scale);
+
+          if (geometrystrlength < geosize)
+          {
+              geometrystrlength = geosize;
+              if (geometrystr != nullptr)
+              {
+                  delete[] geometrystr;
+                  geometrystr = nullptr;
+              }
+          }
+
+          if (geometrystr == nullptr)
+              geometrystr = new char[geometrystrlength];
+
+          size_t pos = 0;
+          memcpy(geometrystr, &geometrytype, sizeof(geometrytype));
+          pos += sizeof(geometrytype);
+          memcpy(geometrystr + pos, &geo->cylinder, sizeof(geo->cylinder));
+          pos += sizeof(geo->cylinder);
+          memcpy(geometrystr + pos, &scale, sizeof(scale));
+
+          //geometrystr << geometrytype;
+          //geometrystr << geo->cylinder.radius;
+          //geometrystr << geo->cylinder.height;
+
+          //geometrystr << scale;
 
           if (geo->triangulation == nullptr)
               geo->triangulation = factory->cylinder(&__store->arenaTriangulation, geo, scale);
 
           TriangleCount = geo->triangulation->triangles_n;
 
-          shape = subshape;
+          //shape = subshape;
 
           geoname = "Cylinder " + std::to_string(GeoIndex) + " of ";
 
@@ -999,22 +1373,51 @@ namespace ExportEWC{
       break;
 
       case Geometry::Kind::CircularTorus:
-
-
       {
-          std::shared_ptr<e5dFace_CircularTorus> subshape = std::make_shared<e5dFace_CircularTorus>();
-          subshape->radius = geo->circularTorus.radius;
-          subshape->angle = geo->circularTorus.angle;
-          subshape->offset = geo->circularTorus.offset;
+          //std::shared_ptr<e5dFace_CircularTorus> subshape = std::make_shared<e5dFace_CircularTorus>();
+          //subshape->radius = geo->circularTorus.radius;
+          //subshape->angle = geo->circularTorus.angle;
+          //subshape->offset = geo->circularTorus.offset;
 
-          subshape->scale = scale;
+          //subshape->scale = scale;
+
+          geometrytype = e5dFace_CircularTorus::ID;
+
+          geosize = sizeof(geometrytype) + sizeof(geo->circularTorus) + sizeof(scale);
+
+          if (geometrystrlength < geosize)
+          {
+              geometrystrlength = geosize;
+              if (geometrystr != nullptr)
+              {
+                  delete[] geometrystr;
+                  geometrystr = nullptr;
+              }
+          }
+
+          if (geometrystr == nullptr)
+              geometrystr = new char[geometrystrlength];
+
+          size_t pos = 0;
+          memcpy(geometrystr, &geometrytype, sizeof(geometrytype));
+          pos += sizeof(geometrytype);
+          memcpy(geometrystr + pos, &geo->circularTorus, sizeof(geo->circularTorus));
+          pos += sizeof(geo->circularTorus);
+          memcpy(geometrystr + pos, &scale, sizeof(scale));
+
+          //geometrystr << geometrytype;
+          //geometrystr << geo->circularTorus.radius;
+          //geometrystr << geo->circularTorus.angle;
+          //geometrystr << geo->circularTorus.offset;
+
+          //geometrystr << scale;
 
           if (geo->triangulation == nullptr)
               geo->triangulation = factory->circularTorus(&__store->arenaTriangulation, geo, scale);
 
           TriangleCount = geo->triangulation->triangles_n;
 
-          shape = subshape;
+          //shape = subshape;
 
           geoname = "CircularTorus " + std::to_string(GeoIndex) + " of ";
 
@@ -1039,10 +1442,12 @@ namespace ExportEWC{
       //    ctx.logger(1, "shape parse %s %lldms", shapename.c_str(), e / 1000000);
       //}
 
+      if (geometrytype == 0 || geosize == 0)
+          return false;
 
 #if !NOTPARSESHAPE
-      if (shape == nullptr)
-          return false;
+      //if (shape == nullptr)
+      //    return false;
 #endif
 
 
@@ -1069,7 +1474,8 @@ namespace ExportEWC{
       time0 = std::chrono::high_resolution_clock::now();
 
 #if !NOTSHAPE2BIN
-      Shape2Binary(shape, binstr);
+      binstr = std::string(geometrystr, geosize);
+      //Shape2Binary(shape, binstr);
 #endif
 
       e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
@@ -1103,12 +1509,6 @@ namespace ExportEWC{
       auto shapeId = ++GlobalShapeId;
 
 
-#if !NOTPARSESHAPE
-      int geometrytype = shape->type();
-#else
-      int geometrytype = 0;
-#endif
-
       //写入数据库
       std::string utf8name;
       if (utf8Data)
@@ -1127,7 +1527,13 @@ namespace ExportEWC{
 
 #if !NOTWRITEDB
 
-      if (!da.AddInstance(shapeInstanceId, E5D::Studio::DataAccess::ShapeClassId, utf8name, "", false))
+      if (!da.AddInstance(shapeInstanceId, E5D::Studio::DataAccess::ShapeClassId, utf8name, nullptr, false,
+          geo->bboxWorld.min.x,
+          geo->bboxWorld.min.y,
+          geo->bboxWorld.min.z,
+          geo->bboxWorld.max.x,
+          geo->bboxWorld.max.y,
+          geo->bboxWorld.max.z))
       {
           ctx.logger(2, "add inst failed: %s", utf8name.c_str());
           return false;
@@ -1139,17 +1545,17 @@ namespace ExportEWC{
           return false;
       }
 
-      if (!da.UpdateInstanceBoundingBox(shapeInstanceId,
-          geo->bboxWorld.min.x,
-          geo->bboxWorld.min.y,
-          geo->bboxWorld.min.z,
-          geo->bboxWorld.max.x,
-          geo->bboxWorld.max.y,
-          geo->bboxWorld.max.z))
-      {
-          ctx.logger(2, "update boundbox failed: %s", utf8name.c_str());
-          return false;
-      }
+      //if (!da.UpdateInstanceBoundingBox(shapeInstanceId,
+      //    geo->bboxWorld.min.x,
+      //    geo->bboxWorld.min.y,
+      //    geo->bboxWorld.min.z,
+      //    geo->bboxWorld.max.x,
+      //    geo->bboxWorld.max.y,
+      //    geo->bboxWorld.max.z))
+      //{
+      //    ctx.logger(2, "update boundbox failed: %s", utf8name.c_str());
+      //    return false;
+      //}
 #endif
 
       double Matrix[12] = {
@@ -1196,9 +1602,37 @@ namespace ExportEWC{
 
               matrixstr = std::string(utf8matrix);
 
-              delete utf8matrix;
+              delete[] utf8matrix;
           }
       }
+
+      ShapeData shapedata;
+      shapedata.Id = shapeId;
+      shapedata.Geometry = binstr;
+      shapedata.GeometryType = geometrytype;
+      shapedata.InstanceId = instanceId;
+      shapedata.LocalMax[0] = geo->bboxLocal.max.x;
+      shapedata.LocalMax[1] = geo->bboxLocal.max.y;
+      shapedata.LocalMax[2] = geo->bboxLocal.max.z;
+      shapedata.LocalMin[0] = geo->bboxLocal.min.x;
+      shapedata.LocalMin[1] = geo->bboxLocal.min.y;
+      shapedata.LocalMin[2] = geo->bboxLocal.min.z;
+      shapedata.WorldMax[0] = geo->bboxWorld.max.x;
+      shapedata.WorldMax[1] = geo->bboxWorld.max.y;
+      shapedata.WorldMax[2] = geo->bboxWorld.max.z;
+      shapedata.WorldMin[0] = geo->bboxWorld.min.x;
+      shapedata.WorldMin[1] = geo->bboxWorld.min.y;
+      shapedata.WorldMin[2] = geo->bboxWorld.min.z;
+      shapedata.MaterialId = matId;
+      shapedata.Name = utf8name;
+      shapedata.ShapeInstanceId = shapeInstanceId;
+      shapedata.TriangleCount = TriangleCount;
+
+      shapedata.MatrixStr = matrixstr;
+      memcpy(shapedata.Matrix, Matrix, sizeof(Matrix));
+
+      ctx.shapes.push_back(shapedata);
+
 
 
 #if !NOTWRITEDB
@@ -1468,10 +1902,20 @@ namespace ExportEWC{
       }
       if (node->kind == Node::Kind::Group) {
           ctx.totalitemnum++;
+          ctx.instancenum++;
           for (Geometry* geo = node->group.geometries.first; geo; geo = geo->next) {
+              ctx.shapenum++;
               ctx.totalitemnum++;
               engulf(nodeBounds, geo->bboxWorld);
           }
+      }
+      else if (node->kind == Node::Kind::Model)
+      {
+          ctx.instancenum++;
+      }
+      else if (node->kind == Node::Kind::File)
+      {
+          ctx.modelnum++;
       }
       node->bboxWorld = nodeBounds;
       engulf(worldBounds, nodeBounds);
@@ -1501,6 +1945,53 @@ using namespace ExportEWC;
 
 bool exportEWC(Store* store, Logger logger, const std::string& filename)
 {
+
+    //获取当前可执行文件目录下的 e5dstudio_template.db 文件绝对路径
+    std::string templatedbfilename;
+    {
+        // 获取当前可执行文件路径
+        char exePath[MAX_PATH];
+        GetModuleFileNameA(NULL, exePath, MAX_PATH);
+        std::filesystem::path exeDir = std::filesystem::path(exePath).parent_path();
+        templatedbfilename = (exeDir / "e5dstudio_template.db").string();
+    }
+    //{
+    //    E5D::Studio::DataAccess testda;
+    //    E5D::Studio::DataAccessUtil::EnsureDatabase("D:/E/vue/TestFrVue/3Dmodel/", "testinst1.ewc", templatedbfilename);
+    //    testda.E5dDbPath = "D:/E/vue/TestFrVue/3Dmodel/testinst1.ewc";
+
+    //    std::vector<std::string> meshstrs;
+    //    meshstrs.reserve(500000);
+    //    for (size_t i = 0; i < 500000; i++)
+    //    {
+    //        meshstrs.push_back("2342424234lsdjlskjflksfsdffwefwofwjef");
+    //    }
+
+    //    auto time0 = std::chrono::high_resolution_clock::now();
+
+    //    testda.OpenLocalDatabase();
+    //    testda.BeginForBatch();
+
+
+    //    for (size_t i = 0; i < 3000000; i++)
+    //    {
+    //        testda.AddInstance(i + 1, E5D::Studio::DataAccess::ComponentClassId, std::to_string(i), "", false);
+    //    }
+
+    //    for (size_t i = 0; i < 500000; i++)
+    //    {
+    //        testda.AddMesh(i + 1, i + 1, 100, 0, 0, 0, 1, 1, 1, meshstrs[i]);
+    //    }
+
+    //    testda.EndForBatch();
+    //    testda.CloseLocalDatabase();
+
+    //    long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //    logger(0, "test  in %lldms", e / 1000000);
+
+    //    return false;
+    //}
+
     Context ctx{
       .logger = logger
     };
@@ -1556,15 +2047,6 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
     //获取ewcfilename的文件名（带扩展名）
     std::string outputcleanfilename = std::filesystem::path(ewcfilename).filename().string();
 
-    //获取当前可执行文件目录下的 e5dstudio_template.db 文件绝对路径
-    std::string templatedbfilename;
-    {
-        // 获取当前可执行文件路径
-        char exePath[MAX_PATH];
-        GetModuleFileNameA(NULL, exePath, MAX_PATH);
-        std::filesystem::path exeDir = std::filesystem::path(exePath).parent_path();
-        templatedbfilename = (exeDir / "e5dstudio_template.db").string();
-    }
 
     E5D::Studio::DataAccessUtil::EnsureDatabase(outputfolder, outputcleanfilename, templatedbfilename);
 
@@ -1591,12 +2073,12 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
         return false;
     }
 
-    da.SetWalAutoCheckpoint(10000);
+    da.SetWalAutoCheckpoint(100000);
     //da.SetJournalSizeLimit(104857600);
 
     //da.SetMMapSize(268435456);
 
-    //da.SetSynchronous(E5D::Studio::SQLiteSynchronousType::OFF);
+    da.SetSynchronous(E5D::Studio::SQLiteSynchronousType::OFF);
 
     if (!da.BeginForBatch())
     {
@@ -1604,11 +2086,11 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
         return false;
     }
 
-    if (!da.DeleteIndexBeforeBatch())
-    {
-        ctx.logger(2, "准备批处理失败: %s", ewcfilename.c_str());
-        return false;
-    }
+    //if (!da.DeleteIndexBeforeBatch())
+    //{
+    //    ctx.logger(2, "准备批处理失败: %s", ewcfilename.c_str());
+    //    return false;
+    //}
 
     da.AutoCommitNum = 0;
 
@@ -1625,6 +2107,11 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
 
     extendBounds(ctx, worldBounds, store->getFirstRoot());
 
+    //ctx.model.reserve(ctx.modelnum);
+    //ctx.instances.reserve(ctx.instancenum);
+    //ctx.shapes.reserve(ctx.shapenum);
+    //ctx.materials.reserve(1000);
+
     __store = store;
 
     float tolerance = 0.1f;
@@ -1633,15 +2120,161 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
 
     auto time0 = std::chrono::high_resolution_clock::now();
 
-    //for (size_t i = 0; i < 4000000; i++)
-    //{
-    //    da.AddInstance(i + 1, E5D::Studio::DataAccess::ComponentClassId, "", "", false);
-    //}
 
     processChildren(ctx, da, factory, store->getFirstRoot(), 0, 0);
 
 
     delete factory;
+
+
+    if (geometrystr != nullptr)
+    {
+        delete[] geometrystr;
+        geometrystr = nullptr;
+    }
+
+    //ctx.materialnum = ctx.materials.size();
+
+    //for (size_t i = 0; i < ctx.materialnum; i++)
+    //{
+    //    auto& mat = ctx.materials[i];
+
+    //    if (!da.AddMaterial(mat.id, "", mat))
+    //    {
+    //        ctx.logger(2, "add material failed: %d", mat.id);
+    //        return false;
+    //    }
+
+    //    if (i % 10 == 9)
+    //        ctx.logger(1, "write material %ld / %ld", i + 1, ctx.materialnum);
+    //}
+
+    //ctx.modelnum = ctx.model.size();
+
+    //for (size_t i = 0; i < ctx.modelnum; i++)
+    //{
+    //    auto& model = ctx.model[i];
+    //    if (!da.AddModel(model.Name, model.Id))
+    //    {
+    //        ctx.logger(2, "add model failed: %s", model.Name.c_str());
+    //        return false;
+    //    }
+    //    if (!da.UpdateInstanceBoundingBox(model.Id,
+    //        model.Min[0],
+    //        model.Min[1],
+    //        model.Min[2],
+    //        model.Max[0],
+    //        model.Max[1],
+    //        model.Max[2]))
+    //    {
+    //        ctx.logger(2, "update boundbox failed: %s", model.Name.c_str());
+    //        return false;
+    //    }
+    //}
+
+    //ctx.instancenum = ctx.instances.size();
+
+    //for (size_t i = 0; i < ctx.instancenum; i++)
+    //{
+    //    auto& inst = ctx.instances[i];
+
+    //    if (!da.AddInstance(inst.Id, E5D::Studio::DataAccess::ComponentClassId, inst.Name, "", inst.IsSignificant))
+    //    {
+    //        ctx.logger(2, "add instance failed: %s", inst.Name.c_str());
+    //        return false;
+    //    }
+    //    if (!da.UpdateInstanceBoundingBox(inst.Id,
+    //        inst.Min[0],
+    //        inst.Min[1],
+    //        inst.Min[2],
+    //        inst.Max[0],
+    //        inst.Max[1],
+    //        inst.Max[2]))
+    //    {
+    //        ctx.logger(2, "update boundbox failed: %s", inst.Name.c_str());
+    //        return false;
+    //    }
+    //    if (!da.AddAsso(inst.ParentId, inst.Id, E5D::Studio::DataAccess::TreeAssoId))
+    //    {
+    //        ctx.logger(2, "add asso failed: %s", inst.Name.c_str());
+    //        return false;
+    //    }
+
+    //    if (i % 10000 == 9999)
+    //        ctx.logger(1, "write instance %ld / %ld", i + 1, ctx.instancenum);
+    //}
+
+    //ctx.shapenum = ctx.shapes.size();
+
+    //for (size_t i = 0; i < ctx.shapenum; i++)
+    //{
+    //    auto& shp = ctx.shapes[i];
+
+    //    if (!da.AddInstance(shp.ShapeInstanceId, E5D::Studio::DataAccess::ShapeClassId, shp.Name, "", false))
+    //    {
+    //        ctx.logger(2, "add inst failed: %s", shp.Name.c_str());
+    //        return false;
+    //    }
+
+    //    if (!da.AddAsso(shp.InstanceId, shp.ShapeInstanceId, E5D::Studio::DataAccess::TreeAssoId))
+    //    {
+    //        ctx.logger(2, "add asso failed: %s", shp.Name.c_str());
+    //        return false;
+    //    }
+
+    //    if (!da.UpdateInstanceBoundingBox(shp.ShapeInstanceId,
+    //        shp.LocalMin[0],
+    //        shp.LocalMin[1],
+    //        shp.LocalMin[2],
+    //        shp.LocalMax[0],
+    //        shp.LocalMax[1],
+    //        shp.LocalMax[2]))
+    //    {
+    //        ctx.logger(2, "update boundbox failed: %s", shp.Name.c_str());
+    //        return false;
+    //    }
+
+
+
+    //    if (!da.AddShape(shp.Id, shp.ShapeInstanceId, shp.Id, shp.MaterialId,
+    //        shp.WorldMin[0],
+    //        shp.WorldMin[1],
+    //        shp.WorldMin[2],
+    //        shp.WorldMax[0],
+    //        shp.WorldMax[1],
+    //        shp.WorldMax[2], shp.MatrixStr))
+    //    {
+    //        ctx.logger(2, "add shape failed: %s", shp.Name.c_str());
+    //        return false;
+    //    }
+
+    //    std::vector<uint8_t> geobin;
+
+    //    if (!da.AddGeometry(shp.Id, shp.Id, shp.GeometryType, geobin))
+    //    {
+    //        ctx.logger(2, "add geometry failed: %s", shp.Name.c_str());
+    //        return false;
+    //    }
+
+    //    //std::vector<uint8_t> meshbin(binstr.begin(), binstr.end());
+
+    //    if (!da.AddMesh(shp.Id, shp.Id, shp.TriangleCount,
+    //        shp.LocalMin[0],
+    //        shp.LocalMin[1],
+    //        shp.LocalMin[2],
+    //        shp.LocalMax[0],
+    //        shp.LocalMax[1],
+    //        shp.LocalMax[2], shp.Geometry))
+    //    {
+    //        ctx.logger(2, "add mesh failed: %s", shp.Name.c_str());
+    //        return false;
+    //    }
+
+    //    if (i % 10000 == 9999)
+    //        ctx.logger(1, "write shape %ld / %ld", i + 1, ctx.shapenum);
+
+    //}
+
 
     ctx.logger(0, "shape2bin:%lldms,shapeparse:%lldms,facetgroupparse:%lldms,sqliteope:%lldms,sqlitetimes:%lld",
         ctx.shape2binns / 1000000, ctx.shapeparsens / 1000000,
@@ -1654,11 +2287,15 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
 
     logger(0, "da num %d", da.PendingCommitBatchNum.load());
 
-    if(!da.ReIndexAfterBatch())
-    {
-        ctx.logger(2, "批处理恢复失败: %s", ewcfilename.c_str());
-        return false;
-    }
+
+    //time0 = std::chrono::high_resolution_clock::now();
+    //if(!da.ReIndexAfterBatch())
+    //{
+    //    ctx.logger(2, "批处理恢复失败: %s", ewcfilename.c_str());
+    //    return false;
+    //}
+    //e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //logger(0, "批处理恢复 in %lldms", e / 1000000);
 
     if (!da.EndForBatch(true))
     {
