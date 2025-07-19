@@ -35,7 +35,11 @@
 
 #include "windows.h"
 
+#define NOTWRITEDB 0
 
+#define NOTPARSESHAPE 0
+
+#define NOTSHAPE2BIN 0
 
 #define RVMPARSER_GLTF_PRETTY_PRINT (0)
 
@@ -162,8 +166,18 @@ namespace ExportEWC{
       bool done = false;  // Set to true when there are no more splits
     } split;
 
-    int processedgroupnum = 0;
-    int totalgroupnum = 0;
+    int processeditemnum = 0;
+    int totalitemnum = 0;
+
+    long long shape2binns = 0;
+    long long sqliteopens = 0;
+    long long shapeparsens = 0;
+    long long facegroupparsens = 0;
+
+    long long sqliteopetimes = 0;
+
+    long long writelog = 0;
+
 
     bool centerModel = true;
     bool rotateZToY = true;
@@ -470,6 +484,10 @@ namespace ExportEWC{
 
       utf8name = std::filesystem::path(utf8name).filename().string();
 
+      auto time0 = std::chrono::high_resolution_clock::now();
+
+#if !NOTWRITEDB
+
       if (!da.AddModel(utf8name, nodeId))
       {
           ctx.logger(2, "add model failed: %s", utf8name.c_str());
@@ -486,6 +504,12 @@ namespace ExportEWC{
           ctx.logger(2, "update boundbox failed: %s", utf8name.c_str());
           return false;
       }
+#endif
+      
+      long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+
+      ctx.sqliteopens += e;
+      ctx.sqliteopetimes++;
 
       return true;
   }
@@ -534,6 +558,10 @@ namespace ExportEWC{
           utf8Data = nullptr;
       }
 
+      auto time0 = std::chrono::high_resolution_clock::now();
+
+#if !NOTWRITEDB
+
       if (!da.AddInstance(nodeId, E5D::Studio::DataAccess::ComponentClassId, utf8name, "", isSignificant))
       {
           ctx.logger(2, "add instance failed: %s", utf8name.c_str());
@@ -555,7 +583,12 @@ namespace ExportEWC{
           ctx.logger(2, "add asso failed: %s", utf8name.c_str());
           return false;
       }
+#endif
 
+      long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+
+      ctx.sqliteopens += e;
+      ctx.sqliteopetimes++;
 
       //CustomMessageHeader pMsg;
       //pMsg.msgType = 2;
@@ -652,12 +685,21 @@ namespace ExportEWC{
           mat.roughness = roughness;
 
 
+          auto time0 = std::chrono::high_resolution_clock::now();
+
+#if !NOTWRITEDB
+
           if (!da.AddMaterial(matId,"",mat))
           {
               ctx.logger(2, "add material failed: %d", matId);
               return false;
           }
+#endif
 
+          long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+
+          ctx.sqliteopens += e;
+          ctx.sqliteopetimes++;
 
           //CustomMessageHeader pMsg;
           //pMsg.msgType = 4;
@@ -717,7 +759,13 @@ namespace ExportEWC{
 
       auto scale = getScale(geo->M_3x4);
 
+
+      auto time0 = std::chrono::high_resolution_clock::now();
+
       std::shared_ptr< e5d_Shape> shape = nullptr;
+
+#if !NOTPARSESHAPE
+
       switch (geo->kind) {
 
       case Geometry::Kind::Pyramid:
@@ -809,6 +857,11 @@ namespace ExportEWC{
           auto scale = getScale(geo->M_3x4);
           if (geo->triangulation == nullptr)
               geo->triangulation = factory->facetGroup(&__store->arenaTriangulation, geo, scale);
+
+
+          auto time0 = std::chrono::high_resolution_clock::now();
+
+
           std::shared_ptr<e5d_Mesh> subshape = std::make_shared<e5d_Mesh>();
           for (size_t i = 0; i < geo->triangulation->vertices_n; i++)
           {
@@ -834,6 +887,9 @@ namespace ExportEWC{
               subshape->faces.push_back(geo->triangulation->indices[i * 3 + 2]);
           }
 
+          long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+          //ctx.logger(1, "FacetGroup parse  in %lldms", e / 1000000);
+          ctx.facegroupparsens += e;
 
           TriangleCount = geo->triangulation->triangles_n;
           //TriangleCount = subshape->faces.size();
@@ -970,8 +1026,24 @@ namespace ExportEWC{
           break;
       }
 
+#endif
+
+      long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+
+      ctx.shapeparsens += e;
+
+      std::string shapename = geoname + (instName ? std::string(instName) : "");
+
+      //if (e > 3e6)
+      //{
+      //    ctx.logger(1, "shape parse %s %lldms", shapename.c_str(), e / 1000000);
+      //}
+
+
+#if !NOTPARSESHAPE
       if (shape == nullptr)
           return false;
+#endif
 
 
       if (TriangleCount == 0)
@@ -993,9 +1065,21 @@ namespace ExportEWC{
 
       std::string binstr;
 
-      Shape2Binary(shape, binstr);
 
-      std::string shapename = geoname + (instName ? std::string(instName) : "");
+      time0 = std::chrono::high_resolution_clock::now();
+
+#if !NOTSHAPE2BIN
+      Shape2Binary(shape, binstr);
+#endif
+
+      e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+
+      ctx.shape2binns += e;
+
+      //if (e > 10e6)
+      //{
+      //    ctx.logger(1, "shape bin %s %lldms", shapename.c_str(), e / 1000000);
+      //}
 
 
       const char* utf8Data = nullptr;
@@ -1018,7 +1102,12 @@ namespace ExportEWC{
 
       auto shapeId = ++GlobalShapeId;
 
+
+#if !NOTPARSESHAPE
       int geometrytype = shape->type();
+#else
+      int geometrytype = 0;
+#endif
 
       //写入数据库
       std::string utf8name;
@@ -1033,6 +1122,10 @@ namespace ExportEWC{
       }
 
       auto shapeInstanceId = ++GlobalInstanceId;
+
+      time0 = std::chrono::high_resolution_clock::now();
+
+#if !NOTWRITEDB
 
       if (!da.AddInstance(shapeInstanceId, E5D::Studio::DataAccess::ShapeClassId, utf8name, "", false))
       {
@@ -1057,6 +1150,7 @@ namespace ExportEWC{
           ctx.logger(2, "update boundbox failed: %s", utf8name.c_str());
           return false;
       }
+#endif
 
       double Matrix[12] = {
         geo->M_3x4.m00,
@@ -1107,6 +1201,8 @@ namespace ExportEWC{
       }
 
 
+#if !NOTWRITEDB
+
 
       if (!da.AddShape(shapeId, shapeInstanceId, shapeId, matId,
           geo->bboxWorld.min.x,
@@ -1128,7 +1224,7 @@ namespace ExportEWC{
           return false;
       }
 
-      std::vector<uint8_t> meshbin(binstr.begin(), binstr.end());
+      //std::vector<uint8_t> meshbin(binstr.begin(), binstr.end());
 
       if (!da.AddMesh(shapeId, shapeId, TriangleCount,
           geo->bboxLocal.min.x,
@@ -1136,11 +1232,22 @@ namespace ExportEWC{
           geo->bboxLocal.min.z,
           geo->bboxLocal.max.x,
           geo->bboxLocal.max.y,
-          geo->bboxLocal.max.z, meshbin))
+          geo->bboxLocal.max.z, binstr))
       {
           ctx.logger(2, "add mesh failed: %s", utf8name.c_str());
           return false;
       }
+#endif
+
+      e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+
+      ctx.sqliteopens += e;
+      ctx.sqliteopetimes++;
+
+      //if (e > 3e6)
+      //{
+      //    ctx.logger(1, "shape write db %s %lldms", shapename.c_str(), e / 1000000);
+      //}
 
       //CustomMessageHeader pMsg;
       //pMsg.msgType = 3;
@@ -1303,6 +1410,18 @@ namespace ExportEWC{
                           //ReadWaiting(ctx, hPipe);
                       }
 
+                      ctx.processeditemnum++;
+
+                      if (ctx.processeditemnum % 10000 == 0)
+                      {
+                          auto time0 = std::chrono::high_resolution_clock::now();
+                              
+                          ctx.logger(0, "processed %d / %d", ctx.processeditemnum, ctx.totalitemnum);
+
+                          long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+                          
+                          ctx.writelog += e;
+                      }
                   }
 
 
@@ -1310,11 +1429,17 @@ namespace ExportEWC{
               }
           }
 
-          ctx.processedgroupnum++;
+          ctx.processeditemnum++;
 
-          if (ctx.processedgroupnum % 1000 == 0)
+          if (ctx.processeditemnum % 10000 == 0)
           {
-              ctx.logger(0, "processed %d / %d", ctx.processedgroupnum, ctx.totalgroupnum);
+              auto time0 = std::chrono::high_resolution_clock::now();
+
+              ctx.logger(0, "processed %d / %d", ctx.processeditemnum, ctx.totalitemnum);
+
+              long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+
+              ctx.writelog += e;
           }
 
       }
@@ -1342,8 +1467,9 @@ namespace ExportEWC{
           extendBounds(ctx, nodeBounds, child);
       }
       if (node->kind == Node::Kind::Group) {
-          ctx.totalgroupnum++;
+          ctx.totalitemnum++;
           for (Geometry* geo = node->group.geometries.first; geo; geo = geo->next) {
+              ctx.totalitemnum++;
               engulf(nodeBounds, geo->bboxWorld);
           }
       }
@@ -1396,6 +1522,34 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
             return false;
         }
     }
+    {
+        std::string wal = ewcfilename + "-wal";
+        // 检查文件是否存在，如果存在则移动到回收站
+        if (std::filesystem::exists(wal)) {
+            ctx.logger(1, "EWC文件已存在，正在移动到回收站: %s", wal.c_str());
+            if (MoveFileToRecycleBin(wal)) {
+                ctx.logger(1, "成功将文件移动到回收站: %s", wal.c_str());
+            }
+            else {
+                ctx.logger(2, "移动文件到回收站失败: %s", wal.c_str());
+                return false;
+            }
+        }
+    }
+    {
+        std::string wal = ewcfilename + "-shm";
+        // 检查文件是否存在，如果存在则移动到回收站
+        if (std::filesystem::exists(wal)) {
+            ctx.logger(1, "EWC文件已存在，正在移动到回收站: %s", wal.c_str());
+            if (MoveFileToRecycleBin(wal)) {
+                ctx.logger(1, "成功将文件移动到回收站: %s", wal.c_str());
+            }
+            else {
+                ctx.logger(2, "移动文件到回收站失败: %s", wal.c_str());
+                return false;
+            }
+        }
+    }
     //获取ewcfilename的目录
     std::string outputfolder = std::filesystem::path(ewcfilename).parent_path().string();
 
@@ -1427,6 +1581,8 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
         ewcfilename = AnsiToUTF8(ewcfilename.data());
     }
 
+
+
     E5D::Studio::DataAccess da;
     da.E5dDbPath =  ewcfilename;
     if (!da.OpenLocalDatabase())
@@ -1434,12 +1590,27 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
         ctx.logger(2, "打开ewc文件失败: %s", ewcfilename.c_str());
         return false;
     }
+
+    da.SetWalAutoCheckpoint(10000);
+    //da.SetJournalSizeLimit(104857600);
+
+    //da.SetMMapSize(268435456);
+
+    //da.SetSynchronous(E5D::Studio::SQLiteSynchronousType::OFF);
+
     if (!da.BeginForBatch())
     {
         ctx.logger(2, "开启ewc文件失败: %s", ewcfilename.c_str());
         return false;
     }
 
+    if (!da.DeleteIndexBeforeBatch())
+    {
+        ctx.logger(2, "准备批处理失败: %s", ewcfilename.c_str());
+        return false;
+    }
+
+    da.AutoCommitNum = 0;
 
     std::string signcode = GenerateGuidString();
     std::string cacheguid = GenerateGuidString();
@@ -1460,11 +1631,34 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
     int maxSamples = 100;
     auto factory = new TriangulationFactory(store, logger, tolerance, 6, maxSamples);
 
+    auto time0 = std::chrono::high_resolution_clock::now();
+
+    //for (size_t i = 0; i < 4000000; i++)
+    //{
+    //    da.AddInstance(i + 1, E5D::Studio::DataAccess::ComponentClassId, "", "", false);
+    //}
 
     processChildren(ctx, da, factory, store->getFirstRoot(), 0, 0);
 
 
     delete factory;
+
+    ctx.logger(0, "shape2bin:%lldms,shapeparse:%lldms,facetgroupparse:%lldms,sqliteope:%lldms,sqlitetimes:%lld",
+        ctx.shape2binns / 1000000, ctx.shapeparsens / 1000000,
+        ctx.facegroupparsens / 1000000, ctx.sqliteopens / 1000000, ctx.sqliteopetimes);
+
+    ctx.logger(0, "write log:%lldms", ctx.writelog/ 1000000);
+
+    long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    logger(0, "processed  in %lldms", e / 1000000);
+
+    logger(0, "da num %d", da.PendingCommitBatchNum.load());
+
+    if(!da.ReIndexAfterBatch())
+    {
+        ctx.logger(2, "批处理恢复失败: %s", ewcfilename.c_str());
+        return false;
+    }
 
     if (!da.EndForBatch(true))
     {
@@ -1476,6 +1670,7 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
         ctx.logger(2, "关闭ewc文件失败: %s", ewcfilename.c_str());
         return false;
     }
+
 
     // da.CloseLocalDatabase();之后再次检查文件大小，如果相等，则删除ewcfilename
     if (std::filesystem::exists(ewcfilename)) {

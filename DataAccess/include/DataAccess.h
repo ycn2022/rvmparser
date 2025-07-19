@@ -6,6 +6,7 @@
 #include <map>
 #include <variant>
 #include <cstdint>
+#include <atomic>>
 
 // Forward declaration
 struct sqlite3;
@@ -34,6 +35,13 @@ namespace Studio {
         std::string roughness_texname;
     };
 
+    enum class SQLiteSynchronousType
+    {
+        FULL,
+        NORMAL,
+        OFF,
+    };
+
     class DataAccess {
     public:
         DataAccess();
@@ -51,6 +59,7 @@ namespace Studio {
         bool QuietCloseLocalDatabase();
         bool IsConnected() const;
 
+    protected:
         // 基本SQL操作
         bool ExecuteNonQuery(const std::string& sql);
         DataTable ExecuteQuery(const std::string& sql);
@@ -59,36 +68,48 @@ namespace Studio {
         bool ExecuteNonQuery(const std::string& sql, const std::vector<DataValue>& parameters);
         DataTable ExecuteQuery(const std::string& sql, const std::vector<DataValue>& parameters);
 
-    protected:
+        
         // 事务管理
         bool BeginTransaction();
         bool CommitTransaction();
         bool RollbackTransaction();
 
     public:
+
         // 批处理事务管理
         bool BeginForBatch();
         bool CommitForBatch(bool commit = true);
         bool EndForBatch(bool commit = true);
 
-    protected:
         // 数据库设置
         bool EnableWAL();
-        bool SetCacheSize(int64_t cache_size);
+        bool SetCacheSize(const int64_t& cache_size);
+        bool SetMMapSize(const int64_t& mmap_size);
 
-    public:
+        //bool SetPageSize(const int& page_size);
+
+        bool SetWalAutoCheckpoint(const int& autocheckpoint);
+
+        bool SetJournalSizeLimit(const int& walfilesize);
+
+        bool SetSynchronous(const SQLiteSynchronousType& Synchronous);
+
+        bool DeleteIndexBeforeBatch();
+
+        bool ReIndexAfterBatch();
 
         // 数据操作方法
         bool GetMaxId(const std::string& tabname, int64_t& maxid);
-        bool AddInstance(int64_t id, int64_t classid, const std::string& name, const std::string& path, bool isSignificant);
-        bool AddMaterial(int64_t id, const std::string& textureFolder, const BaseMaterial& material);
-        bool AddModel(const std::string& modelName, int64_t id);
-        bool AddAssoType(const std::string& name, const std::string& desc, const std::string& source_role, const std::string& target_role, int id);
-        bool AddAsso(int64_t parentId, int64_t id, int64_t assoType);
-        bool AddShape(int64_t id, int64_t instid, int64_t geo_id, int material_id, double min_x, double min_y, double min_z, double max_x, double max_y, double max_z, const std::string& matrix);
-        bool AddGeometry(int64_t id, int64_t hashcode, int geo_type, const std::vector<uint8_t>& geo_byte);
-        bool AddMesh(int64_t id, int64_t geo_id, int mesh_tri_count, double xmin, double ymin, double zmin, double xmax, double ymax, double zmax, const std::vector<uint8_t>& mesh);
-        bool UpdateInstanceBoundingBox(int64_t instid, double min_x, double min_y, double min_z, double max_x, double max_y, double max_z);
+        bool AddInstance(const int64_t& id, const int64_t& classid, const std::string& name, const std::string& path, const bool& isSignificant);
+        bool AddMaterial(const int64_t& id, const std::string& textureFolder, const BaseMaterial& material);
+        bool AddModel(const std::string& modelName, const int64_t& id);
+        bool AddAssoType(const std::string& name, const std::string& desc, const std::string& source_role, const std::string& target_role, const int& id);
+        bool AddAsso(const int64_t& parentId, const int64_t& id, const int64_t& assoType);
+        bool AddShape(const int64_t& id, const int64_t& instid, const int64_t& geo_id, const int& material_id, const double& min_x, const double& min_y, const double& min_z, const double& max_x, const double& max_y, const double& max_z, const std::string& matrix);
+        bool AddGeometry(const int64_t& id, const int64_t& hashcode, int geo_type, const std::vector<uint8_t>& geo_byte);
+        bool AddMesh(const int64_t& id, const int64_t& geo_id, int mesh_tri_count, const double& xmin, const double& ymin, const double& zmin, const double& xmax, const double& ymax, const double& zmax, const std::vector<uint8_t>& mesh);
+        bool AddMesh(const int64_t& id, const int64_t& geo_id, int mesh_tri_count, const double& xmin, const double& ymin, const double& zmin, const double& xmax, const double& ymax, const double& zmax, const std::string& mesh);
+        bool UpdateInstanceBoundingBox(const int64_t& instid, const double& min_x, const double& min_y, const double& min_z, const double& max_x, const double& max_y, const double& max_z);
         bool UpdateProjectSettings(const std::map<std::string, std::string>& settings);
 
         // 实用方法
@@ -98,6 +119,9 @@ namespace Studio {
 
         // 数据库路径
         std::string E5dDbPath;
+
+        int AutoCommitNum = 5000;
+        std::atomic<int> PendingCommitBatchNum = 0;
 
     private:
         sqlite3* m_database;
@@ -127,6 +151,8 @@ namespace Studio {
         void ClearError();
         void CleanupStatements();
         std::vector<uint8_t> ReadFileToBytes(const std::string& filePath);
+
+        void AddAndCheckPenddingCommit();
     };
 
     // 工具类
