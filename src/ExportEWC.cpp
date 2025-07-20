@@ -902,9 +902,8 @@ namespace ExportEWC{
 
       int geometrytype = 0;
 
-      size_t geosize = 0;
 
-      char* localgeometrystr = nullptr;
+      TriangleCount = geo->triangulation->triangles_n;
 
 #if !NOTPARSESHAPE
 
@@ -912,53 +911,53 @@ namespace ExportEWC{
 
       case Geometry::Kind::Pyramid:
       {
-          //std::shared_ptr<e5dFace_Pyramid> subshape = std::make_shared<e5dFace_Pyramid>();
-          //subshape->top[0] = geo->pyramid.top[0];
-          //subshape->top[1] = geo->pyramid.top[1];
-          //subshape->bottom[0] = geo->pyramid.bottom[0];
-          //subshape->bottom[1] = geo->pyramid.bottom[1];
-          //subshape->offset[0] = geo->pyramid.offset[0];
-          //subshape->offset[1] = geo->pyramid.offset[1];
-          //subshape->height = geo->pyramid.height;
+          ////std::shared_ptr<e5dFace_Pyramid> subshape = std::make_shared<e5dFace_Pyramid>();
+          ////subshape->top[0] = geo->pyramid.top[0];
+          ////subshape->top[1] = geo->pyramid.top[1];
+          ////subshape->bottom[0] = geo->pyramid.bottom[0];
+          ////subshape->bottom[1] = geo->pyramid.bottom[1];
+          ////subshape->offset[0] = geo->pyramid.offset[0];
+          ////subshape->offset[1] = geo->pyramid.offset[1];
+          ////subshape->height = geo->pyramid.height;
 
           geometrytype = e5dFace_Pyramid::ID;
 
-          geosize = sizeof(geometrytype) + sizeof(geo->pyramid);
+          //geosize = sizeof(geometrytype) + sizeof(geo->pyramid);
 
-          //if (geometrystrlength < geosize)
-          //{
-          //    geometrystrlength = geosize;
-          //    if (geometrystr != nullptr)
-          //    {
-          //        delete[] geometrystr;
-          //        geometrystr = nullptr;
-          //    }
-          //}
+          ////if (geometrystrlength < geosize)
+          ////{
+          ////    geometrystrlength = geosize;
+          ////    if (geometrystr != nullptr)
+          ////    {
+          ////        delete[] geometrystr;
+          ////        geometrystr = nullptr;
+          ////    }
+          ////}
 
-          //if (geometrystr == nullptr)
-          //    geometrystr = new char[geometrystrlength];
+          ////if (geometrystr == nullptr)
+          ////    geometrystr = new char[geometrystrlength];
 
-          localgeometrystr = new char[geosize];
+          //localgeometrystr = new char[geosize];
 
-          size_t pos = 0;
-          memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
-          pos += sizeof(geometrytype);
-          memcpy(localgeometrystr + pos, &geo->pyramid, sizeof(geo->pyramid));
+          //size_t pos = 0;
+          //memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
+          //pos += sizeof(geometrytype);
+          //memcpy(localgeometrystr + pos, &geo->pyramid, sizeof(geo->pyramid));
 
 
-          //geometrystr << geometrytype;
-          //geometrystr << geo->pyramid.top[0];
-          //geometrystr << geo->pyramid.top[1];
-          //geometrystr << geo->pyramid.bottom[0];
-          //geometrystr << geo->pyramid.bottom[1];
-          //geometrystr << geo->pyramid.offset[0];
-          //geometrystr << geo->pyramid.offset[1];
-          //geometrystr << geo->pyramid.height;
+          ////geometrystr << geometrytype;
+          ////geometrystr << geo->pyramid.top[0];
+          ////geometrystr << geo->pyramid.top[1];
+          ////geometrystr << geo->pyramid.bottom[0];
+          ////geometrystr << geo->pyramid.bottom[1];
+          ////geometrystr << geo->pyramid.offset[0];
+          ////geometrystr << geo->pyramid.offset[1];
+          ////geometrystr << geo->pyramid.height;
 
-          if (geo->triangulation == nullptr)
-              geo->triangulation = factory->pyramid(&__store->arenaTriangulation, geo, scale);
+          //if (geo->triangulation == nullptr)
+          //    geo->triangulation = factory->pyramid(&__store->arenaTriangulation, geo, scale);
 
-          TriangleCount = geo->triangulation->triangles_n;
+          //TriangleCount = geo->triangulation->triangles_n;
 
           //shape = subshape;
 
@@ -968,48 +967,48 @@ namespace ExportEWC{
       break;
       case Geometry::Kind::Box:
       {
-          //std::shared_ptr<e5dFace_RvmBox> subshape = std::make_shared<e5dFace_RvmBox>();
-          //subshape->lengthx = geo->box.lengths[0];
-          //subshape->lengthy = geo->box.lengths[1];
-          //subshape->lengthz = geo->box.lengths[2];
+          ////std::shared_ptr<e5dFace_RvmBox> subshape = std::make_shared<e5dFace_RvmBox>();
+          ////subshape->lengthx = geo->box.lengths[0];
+          ////subshape->lengthy = geo->box.lengths[1];
+          ////subshape->lengthz = geo->box.lengths[2];
 
           geometrytype = e5dFace_RvmBox::ID;
 
 
-          geosize = sizeof(geometrytype) + sizeof(geo->box);
+          //geosize = sizeof(geometrytype) + sizeof(geo->box);
 
-          //if (geometrystrlength < geosize)
-          //{
-          //    geometrystrlength = geosize;
-          //    if (geometrystr != nullptr)
-          //    {
-          //        delete[] geometrystr;
-          //        geometrystr = nullptr;
-          //    }
-          //}
+          ////if (geometrystrlength < geosize)
+          ////{
+          ////    geometrystrlength = geosize;
+          ////    if (geometrystr != nullptr)
+          ////    {
+          ////        delete[] geometrystr;
+          ////        geometrystr = nullptr;
+          ////    }
+          ////}
 
-          //if (geometrystr == nullptr)
-          //    geometrystr = new char[geometrystrlength];
+          ////if (geometrystr == nullptr)
+          ////    geometrystr = new char[geometrystrlength];
 
-          localgeometrystr = new char[geosize];
+          //localgeometrystr = new char[geosize];
 
-          size_t pos = 0;
-          memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
-          pos += sizeof(geometrytype);
-          memcpy(localgeometrystr + pos, &geo->box, sizeof(geo->box));
+          //size_t pos = 0;
+          //memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
+          //pos += sizeof(geometrytype);
+          //memcpy(localgeometrystr + pos, &geo->box, sizeof(geo->box));
 
-          //geometrystr << geometrytype;
-          //geometrystr << geo->box.lengths[0];
-          //geometrystr << geo->box.lengths[1];
-          //geometrystr << geo->box.lengths[2];
+          ////geometrystr << geometrytype;
+          ////geometrystr << geo->box.lengths[0];
+          ////geometrystr << geo->box.lengths[1];
+          ////geometrystr << geo->box.lengths[2];
 
-          if (geo->triangulation == nullptr)
-              geo->triangulation = factory->box(&__store->arenaTriangulation, geo, scale);
+          //if (geo->triangulation == nullptr)
+          //    geo->triangulation = factory->box(&__store->arenaTriangulation, geo, scale);
 
-          TriangleCount = geo->triangulation->triangles_n;
-          //TriangleCount = 12;
+          //TriangleCount = geo->triangulation->triangles_n;
+          ////TriangleCount = 12;
 
-          //shape = subshape;
+          ////shape = subshape;
 
           geoname = "Box " + std::to_string(GeoIndex) + " of ";
 
@@ -1017,54 +1016,54 @@ namespace ExportEWC{
       break;
       case Geometry::Kind::RectangularTorus:
       {
-          //std::shared_ptr<e5dFace_RectangularTorus> subshape = std::make_shared<e5dFace_RectangularTorus>();
-          //subshape->angle = geo->rectangularTorus.angle;
-          //subshape->height = geo->rectangularTorus.height;
-          //subshape->inner_radius = geo->rectangularTorus.inner_radius;
-          //subshape->outer_radius = geo->rectangularTorus.outer_radius;
+          ////std::shared_ptr<e5dFace_RectangularTorus> subshape = std::make_shared<e5dFace_RectangularTorus>();
+          ////subshape->angle = geo->rectangularTorus.angle;
+          ////subshape->height = geo->rectangularTorus.height;
+          ////subshape->inner_radius = geo->rectangularTorus.inner_radius;
+          ////subshape->outer_radius = geo->rectangularTorus.outer_radius;
 
-          //subshape->scale = scale;
+          ////subshape->scale = scale;
 
           geometrytype = e5dFace_RectangularTorus::ID;
 
 
-          geosize = sizeof(geometrytype) + sizeof(geo->rectangularTorus) + sizeof(scale);
+          //geosize = sizeof(geometrytype) + sizeof(geo->rectangularTorus) + sizeof(scale);
 
-          //if (geometrystrlength < geosize)
-          //{
-          //    geometrystrlength = geosize;
-          //    if (geometrystr != nullptr)
-          //    {
-          //        delete[] geometrystr;
-          //        geometrystr = nullptr;
-          //    }
-          //}
+          ////if (geometrystrlength < geosize)
+          ////{
+          ////    geometrystrlength = geosize;
+          ////    if (geometrystr != nullptr)
+          ////    {
+          ////        delete[] geometrystr;
+          ////        geometrystr = nullptr;
+          ////    }
+          ////}
 
-          //if (geometrystr == nullptr)
-          //    geometrystr = new char[geometrystrlength];
+          ////if (geometrystr == nullptr)
+          ////    geometrystr = new char[geometrystrlength];
 
-          localgeometrystr = new char[geosize];
+          //localgeometrystr = new char[geosize];
 
-          size_t pos = 0;
-          memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
-          pos += sizeof(geometrytype);
-          memcpy(localgeometrystr + pos, &geo->rectangularTorus, sizeof(geo->rectangularTorus));
-          pos += sizeof(geo->rectangularTorus);
-          memcpy(localgeometrystr + pos, &scale, sizeof(scale));
+          //size_t pos = 0;
+          //memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
+          //pos += sizeof(geometrytype);
+          //memcpy(localgeometrystr + pos, &geo->rectangularTorus, sizeof(geo->rectangularTorus));
+          //pos += sizeof(geo->rectangularTorus);
+          //memcpy(localgeometrystr + pos, &scale, sizeof(scale));
 
-          //geometrystr << geometrytype;
-          //geometrystr << geo->rectangularTorus.angle;
-          //geometrystr << geo->rectangularTorus.height;
-          //geometrystr << geo->rectangularTorus.inner_radius;
-          //geometrystr << geo->rectangularTorus.outer_radius;
-          //geometrystr << scale;
+          ////geometrystr << geometrytype;
+          ////geometrystr << geo->rectangularTorus.angle;
+          ////geometrystr << geo->rectangularTorus.height;
+          ////geometrystr << geo->rectangularTorus.inner_radius;
+          ////geometrystr << geo->rectangularTorus.outer_radius;
+          ////geometrystr << scale;
 
-          if (geo->triangulation == nullptr)
-              geo->triangulation = factory->rectangularTorus(&__store->arenaTriangulation, geo, scale);
+          //if (geo->triangulation == nullptr)
+          //    geo->triangulation = factory->rectangularTorus(&__store->arenaTriangulation, geo, scale);
 
-          TriangleCount = geo->triangulation->triangles_n;
+          //TriangleCount = geo->triangulation->triangles_n;
 
-          //shape = subshape;
+          ////shape = subshape;
 
           geoname = "RectangularTorus " + std::to_string(GeoIndex) + " of ";
 
@@ -1072,49 +1071,49 @@ namespace ExportEWC{
       break;
       case Geometry::Kind::Sphere:
       {
-          //std::shared_ptr<e5dFace_RvmSphere> subshape = std::make_shared<e5dFace_RvmSphere>();
-          //subshape->diameter = geo->sphere.diameter;
+          ////std::shared_ptr<e5dFace_RvmSphere> subshape = std::make_shared<e5dFace_RvmSphere>();
+          ////subshape->diameter = geo->sphere.diameter;
 
-          //subshape->scale = scale;
+          ////subshape->scale = scale;
 
           geometrytype = e5dFace_RvmSphere::ID;
 
 
-          geosize = sizeof(geometrytype) + sizeof(geo->sphere) + sizeof(scale);
+          //geosize = sizeof(geometrytype) + sizeof(geo->sphere) + sizeof(scale);
 
-          //if (geometrystrlength < geosize)
-          //{
-          //    geometrystrlength = geosize;
-          //    if (geometrystr != nullptr)
-          //    {
-          //        delete[] geometrystr;
-          //        geometrystr = nullptr;
-          //    }
-          //}
+          ////if (geometrystrlength < geosize)
+          ////{
+          ////    geometrystrlength = geosize;
+          ////    if (geometrystr != nullptr)
+          ////    {
+          ////        delete[] geometrystr;
+          ////        geometrystr = nullptr;
+          ////    }
+          ////}
 
-          //if (geometrystr == nullptr)
-          //    geometrystr = new char[geometrystrlength];
+          ////if (geometrystr == nullptr)
+          ////    geometrystr = new char[geometrystrlength];
 
-          localgeometrystr = new char[geosize];
+          //localgeometrystr = new char[geosize];
 
 
-          size_t pos = 0;
-          memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
-          pos += sizeof(geometrytype);
-          memcpy(localgeometrystr + pos, &geo->sphere, sizeof(geo->sphere));
-          pos += sizeof(geo->sphere);
-          memcpy(localgeometrystr + pos, &scale, sizeof(scale));
+          //size_t pos = 0;
+          //memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
+          //pos += sizeof(geometrytype);
+          //memcpy(localgeometrystr + pos, &geo->sphere, sizeof(geo->sphere));
+          //pos += sizeof(geo->sphere);
+          //memcpy(localgeometrystr + pos, &scale, sizeof(scale));
 
-          //localgeometrystr << geometrytype;
-          //localgeometrystr << geo->sphere.diameter;
-          //localgeometrystr << scale;
+          ////localgeometrystr << geometrytype;
+          ////localgeometrystr << geo->sphere.diameter;
+          ////localgeometrystr << scale;
 
-          if (geo->triangulation == nullptr)
-              geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo, 0.5f * geo->sphere.diameter, pi, 0.f, 1.f, scale);
+          //if (geo->triangulation == nullptr)
+          //    geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo, 0.5f * geo->sphere.diameter, pi, 0.f, 1.f, scale);
 
-          TriangleCount = geo->triangulation->triangles_n;
+          //TriangleCount = geo->triangulation->triangles_n;
 
-          //shape = subshape;
+          ////shape = subshape;
 
           geoname = "Sphere " + std::to_string(GeoIndex) + " of ";
 
@@ -1125,107 +1124,107 @@ namespace ExportEWC{
       case Geometry::Kind::FacetGroup:
       {
 
-          if (geo->triangulation == nullptr)
-              geo->triangulation = factory->facetGroup(&__store->arenaTriangulation, geo, scale);
+          //if (geo->triangulation == nullptr)
+          //    geo->triangulation = factory->facetGroup(&__store->arenaTriangulation, geo, scale);
 
 
-          auto time0 = std::chrono::high_resolution_clock::now();
+          //auto time0 = std::chrono::high_resolution_clock::now();
 
-          geometrytype = e5d_Mesh::ID;
-
-
-
-          geosize = sizeof(geometrytype) + sizeof(geo->triangulation->vertices_n) +
-              sizeof(float) * geo->triangulation->vertices_n * 6+
-              sizeof(geo->triangulation->triangles_n) +
-              sizeof(uint32_t) * geo->triangulation->triangles_n * 3;
-
-          //if (geometrystrlength < geosize)
-          //{
-          //    geometrystrlength = geosize;
-          //    if (geometrystr != nullptr)
-          //    {
-          //        delete[] geometrystr;
-          //        geometrystr = nullptr;
-          //    }
-          //}
-
-          //if (geometrystr == nullptr)
-          //    geometrystr = new char[geometrystrlength];
-
-          localgeometrystr = new char[geosize];
+          geometrytype = e5dFace_RvmFacetGroup::ID;
 
 
-          size_t pos = 0;
-          memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
-          pos += sizeof(geometrytype);
-          memcpy(localgeometrystr+ pos, &geo->triangulation->vertices_n, sizeof(geo->triangulation->vertices_n));
-          pos += sizeof(geo->triangulation->vertices_n);
 
-          memcpy(localgeometrystr + pos, &geo->triangulation->triangles_n, sizeof(geo->triangulation->triangles_n));
-          pos += sizeof(geo->triangulation->triangles_n);
+          //geosize = sizeof(geometrytype) + sizeof(geo->triangulation->vertices_n) +
+          //    sizeof(float) * geo->triangulation->vertices_n * 6+
+          //    sizeof(geo->triangulation->triangles_n) +
+          //    sizeof(uint32_t) * geo->triangulation->triangles_n * 3;
 
-          memcpy(localgeometrystr + pos, geo->triangulation->vertices, sizeof(float)* geo->triangulation->vertices_n * 3);
-          pos += sizeof(float) * geo->triangulation->vertices_n * 3;
-          memcpy(localgeometrystr + pos, geo->triangulation->normals, sizeof(float)* geo->triangulation->vertices_n * 3);
-          pos += sizeof(float) * geo->triangulation->vertices_n * 3;
+          ////if (geometrystrlength < geosize)
+          ////{
+          ////    geometrystrlength = geosize;
+          ////    if (geometrystr != nullptr)
+          ////    {
+          ////        delete[] geometrystr;
+          ////        geometrystr = nullptr;
+          ////    }
+          ////}
+
+          ////if (geometrystr == nullptr)
+          ////    geometrystr = new char[geometrystrlength];
+
+          //localgeometrystr = new char[geosize];
 
 
-          memcpy(localgeometrystr + pos, geo->triangulation->indices, sizeof(uint32_t)* geo->triangulation->triangles_n * 3);
-          pos += sizeof(uint32_t) * geo->triangulation->triangles_n * 3;
+          //size_t pos = 0;
+          //memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
+          //pos += sizeof(geometrytype);
+          //memcpy(localgeometrystr+ pos, &geo->triangulation->vertices_n, sizeof(geo->triangulation->vertices_n));
+          //pos += sizeof(geo->triangulation->vertices_n);
 
-          //geometrystr << geometrytype;
-          //geometrystr << geo->triangulation->vertices_n;
-          //for (size_t i = 0; i < geo->triangulation->vertices_n; i++)
-          //{
-          //    geometrystr << geo->triangulation->vertices[i * 3];
-          //    geometrystr << geo->triangulation->vertices[i * 3 + 1];
-          //    geometrystr << geo->triangulation->vertices[i * 3 + 2];
-          //    geometrystr << geo->triangulation->normals[i * 3];
-          //    geometrystr << geo->triangulation->normals[i * 3 + 1];
-          //    geometrystr << geo->triangulation->normals[i * 3 + 2];
-          //}
-          //geometrystr << geo->triangulation->triangles_n;
-          //for (size_t i = 0; i < geo->triangulation->triangles_n; i++)
-          //{
-          //    geometrystr << geo->triangulation->indices[i * 3];
-          //    geometrystr << geo->triangulation->indices[i * 3 + 1];
-          //    geometrystr << geo->triangulation->indices[i * 3 + 2];
-          //}
+          //memcpy(localgeometrystr + pos, &geo->triangulation->triangles_n, sizeof(geo->triangulation->triangles_n));
+          //pos += sizeof(geo->triangulation->triangles_n);
 
-          //std::shared_ptr<e5d_Mesh> subshape = std::make_shared<e5d_Mesh>();
-          //for (size_t i = 0; i < geo->triangulation->vertices_n; i++)
-          //{
-          //    {
-          //        std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
-          //        vt->x = geo->triangulation->vertices[i * 3];
-          //        vt->y = geo->triangulation->vertices[i * 3 + 1];
-          //        vt->z = geo->triangulation->vertices[i * 3 + 2];
-          //        subshape->postions.push_back(vt);
-          //    }
-          //    {
-          //        std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
-          //        vt->x = geo->triangulation->normals[i * 3];
-          //        vt->y = geo->triangulation->normals[i * 3 + 1];
-          //        vt->z = geo->triangulation->normals[i * 3 + 2];
-          //        subshape->normals.push_back(vt);
-          //    }
-          //}
-          //for (size_t i = 0; i < geo->triangulation->triangles_n; i++)
-          //{
-          //    subshape->faces.push_back(geo->triangulation->indices[i * 3]);
-          //    subshape->faces.push_back(geo->triangulation->indices[i * 3 + 1]);
-          //    subshape->faces.push_back(geo->triangulation->indices[i * 3 + 2]);
-          //}
+          //memcpy(localgeometrystr + pos, geo->triangulation->vertices, sizeof(float)* geo->triangulation->vertices_n * 3);
+          //pos += sizeof(float) * geo->triangulation->vertices_n * 3;
+          //memcpy(localgeometrystr + pos, geo->triangulation->normals, sizeof(float)* geo->triangulation->vertices_n * 3);
+          //pos += sizeof(float) * geo->triangulation->vertices_n * 3;
 
-          long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
-          //ctx.logger(1, "FacetGroup parse  in %lldms", e / 1000000);
-          ctx.facegroupparsens.fetch_add(e, std::memory_order_relaxed);
 
-          TriangleCount = geo->triangulation->triangles_n;
-          //TriangleCount = subshape->faces.size();
+          //memcpy(localgeometrystr + pos, geo->triangulation->indices, sizeof(uint32_t)* geo->triangulation->triangles_n * 3);
+          //pos += sizeof(uint32_t) * geo->triangulation->triangles_n * 3;
 
-          //shape = subshape;
+          ////geometrystr << geometrytype;
+          ////geometrystr << geo->triangulation->vertices_n;
+          ////for (size_t i = 0; i < geo->triangulation->vertices_n; i++)
+          ////{
+          ////    geometrystr << geo->triangulation->vertices[i * 3];
+          ////    geometrystr << geo->triangulation->vertices[i * 3 + 1];
+          ////    geometrystr << geo->triangulation->vertices[i * 3 + 2];
+          ////    geometrystr << geo->triangulation->normals[i * 3];
+          ////    geometrystr << geo->triangulation->normals[i * 3 + 1];
+          ////    geometrystr << geo->triangulation->normals[i * 3 + 2];
+          ////}
+          ////geometrystr << geo->triangulation->triangles_n;
+          ////for (size_t i = 0; i < geo->triangulation->triangles_n; i++)
+          ////{
+          ////    geometrystr << geo->triangulation->indices[i * 3];
+          ////    geometrystr << geo->triangulation->indices[i * 3 + 1];
+          ////    geometrystr << geo->triangulation->indices[i * 3 + 2];
+          ////}
+
+          ////std::shared_ptr<e5d_Mesh> subshape = std::make_shared<e5d_Mesh>();
+          ////for (size_t i = 0; i < geo->triangulation->vertices_n; i++)
+          ////{
+          ////    {
+          ////        std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
+          ////        vt->x = geo->triangulation->vertices[i * 3];
+          ////        vt->y = geo->triangulation->vertices[i * 3 + 1];
+          ////        vt->z = geo->triangulation->vertices[i * 3 + 2];
+          ////        subshape->postions.push_back(vt);
+          ////    }
+          ////    {
+          ////        std::shared_ptr<e5d_Vector> vt = std::make_shared<e5d_Vector>();
+          ////        vt->x = geo->triangulation->normals[i * 3];
+          ////        vt->y = geo->triangulation->normals[i * 3 + 1];
+          ////        vt->z = geo->triangulation->normals[i * 3 + 2];
+          ////        subshape->normals.push_back(vt);
+          ////    }
+          ////}
+          ////for (size_t i = 0; i < geo->triangulation->triangles_n; i++)
+          ////{
+          ////    subshape->faces.push_back(geo->triangulation->indices[i * 3]);
+          ////    subshape->faces.push_back(geo->triangulation->indices[i * 3 + 1]);
+          ////    subshape->faces.push_back(geo->triangulation->indices[i * 3 + 2]);
+          ////}
+
+          //long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+          ////ctx.logger(1, "FacetGroup parse  in %lldms", e / 1000000);
+          //ctx.facegroupparsens.fetch_add(e, std::memory_order_relaxed);
+
+          //TriangleCount = geo->triangulation->triangles_n;
+          ////TriangleCount = subshape->faces.size();
+
+          ////shape = subshape;
 
           geoname = "FacetGroup " + std::to_string(GeoIndex) + " of ";
 
@@ -1234,65 +1233,65 @@ namespace ExportEWC{
 
       case Geometry::Kind::Snout:
       {
-          //std::shared_ptr<e5dFace_Snout> subshape = std::make_shared<e5dFace_Snout>();
-          //subshape->radius_t = geo->snout.radius_t;
-          //subshape->tshear[0] = geo->snout.tshear[0];
-          //subshape->tshear[1] = geo->snout.tshear[1];
-          //subshape->radius_b = geo->snout.radius_b;
-          //subshape->bshear[0] = geo->snout.bshear[0];
-          //subshape->bshear[1] = geo->snout.bshear[1];
-          //subshape->height = geo->snout.height;
-          //subshape->offset[0] = geo->snout.offset[0];
-          //subshape->offset[1] = geo->snout.offset[1];
+          ////std::shared_ptr<e5dFace_Snout> subshape = std::make_shared<e5dFace_Snout>();
+          ////subshape->radius_t = geo->snout.radius_t;
+          ////subshape->tshear[0] = geo->snout.tshear[0];
+          ////subshape->tshear[1] = geo->snout.tshear[1];
+          ////subshape->radius_b = geo->snout.radius_b;
+          ////subshape->bshear[0] = geo->snout.bshear[0];
+          ////subshape->bshear[1] = geo->snout.bshear[1];
+          ////subshape->height = geo->snout.height;
+          ////subshape->offset[0] = geo->snout.offset[0];
+          ////subshape->offset[1] = geo->snout.offset[1];
 
-          //subshape->scale = scale;
+          ////subshape->scale = scale;
 
 
           geometrytype = e5dFace_Snout::ID;
 
-          geosize = sizeof(geometrytype) + sizeof(geo->snout) + sizeof(scale);
+          //geosize = sizeof(geometrytype) + sizeof(geo->snout) + sizeof(scale);
 
-          //if (geometrystrlength < geosize)
-          //{
-          //    geometrystrlength = geosize;
-          //    if (geometrystr != nullptr)
-          //    {
-          //        delete[] geometrystr;
-          //        geometrystr = nullptr;
-          //    }
-          //}
+          ////if (geometrystrlength < geosize)
+          ////{
+          ////    geometrystrlength = geosize;
+          ////    if (geometrystr != nullptr)
+          ////    {
+          ////        delete[] geometrystr;
+          ////        geometrystr = nullptr;
+          ////    }
+          ////}
 
-          //if (geometrystr == nullptr)
-          //    geometrystr = new char[geometrystrlength];
+          ////if (geometrystr == nullptr)
+          ////    geometrystr = new char[geometrystrlength];
 
-          localgeometrystr = new char[geosize];
+          //localgeometrystr = new char[geosize];
 
 
-          size_t pos = 0;
-          memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
-          pos += sizeof(geometrytype);
-          memcpy(localgeometrystr + pos, &geo->snout, sizeof(geo->snout));
-          pos += sizeof(geo->snout);
-          memcpy(localgeometrystr + pos, &scale, sizeof(scale));
+          //size_t pos = 0;
+          //memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
+          //pos += sizeof(geometrytype);
+          //memcpy(localgeometrystr + pos, &geo->snout, sizeof(geo->snout));
+          //pos += sizeof(geo->snout);
+          //memcpy(localgeometrystr + pos, &scale, sizeof(scale));
 
-          //geometrystr << geometrytype;
-          //geometrystr << geo->snout.radius_t;
-          //geometrystr << geo->snout.tshear[0];
-          //geometrystr << geo->snout.tshear[1];
-          //geometrystr << geo->snout.radius_b;
-          //geometrystr << geo->snout.bshear[0];
-          //geometrystr << geo->snout.bshear[1];
-          //geometrystr << geo->snout.height;
-          //geometrystr <<  geo->snout.offset[0];
-          //geometrystr <<  geo->snout.offset[1];
-          //geometrystr << scale;
+          ////geometrystr << geometrytype;
+          ////geometrystr << geo->snout.radius_t;
+          ////geometrystr << geo->snout.tshear[0];
+          ////geometrystr << geo->snout.tshear[1];
+          ////geometrystr << geo->snout.radius_b;
+          ////geometrystr << geo->snout.bshear[0];
+          ////geometrystr << geo->snout.bshear[1];
+          ////geometrystr << geo->snout.height;
+          ////geometrystr <<  geo->snout.offset[0];
+          ////geometrystr <<  geo->snout.offset[1];
+          ////geometrystr << scale;
 
-          if (geo->triangulation == nullptr)
-              geo->triangulation = factory->snout(&__store->arenaTriangulation, geo, scale);
+          //if (geo->triangulation == nullptr)
+          //    geo->triangulation = factory->snout(&__store->arenaTriangulation, geo, scale);
 
-          TriangleCount = geo->triangulation->triangles_n;
+          //TriangleCount = geo->triangulation->triangles_n;
 
-          //shape = subshape;
+          ////shape = subshape;
 
           geoname = "Snout " + std::to_string(GeoIndex) + " of ";
 
@@ -1301,53 +1300,53 @@ namespace ExportEWC{
       case Geometry::Kind::EllipticalDish:
 
       {
-          //std::shared_ptr<e5dFace_EllipticalDish> subshape = std::make_shared<e5dFace_EllipticalDish>();
-          //subshape->baseRadius = geo->ellipticalDish.baseRadius;
-          //subshape->height = geo->ellipticalDish.height;
+          ////std::shared_ptr<e5dFace_EllipticalDish> subshape = std::make_shared<e5dFace_EllipticalDish>();
+          ////subshape->baseRadius = geo->ellipticalDish.baseRadius;
+          ////subshape->height = geo->ellipticalDish.height;
 
-          //subshape->scale = scale;
+          ////subshape->scale = scale;
 
 
           geometrytype = e5dFace_EllipticalDish::ID;
 
-          geosize = sizeof(geometrytype) + sizeof(geo->ellipticalDish) + sizeof(scale);
+          //geosize = sizeof(geometrytype) + sizeof(geo->ellipticalDish) + sizeof(scale);
 
-          //if (geometrystrlength < geosize)
-          //{
-          //    geometrystrlength = geosize;
-          //    if (geometrystr != nullptr)
-          //    {
-          //        delete[] geometrystr;
-          //        geometrystr = nullptr;
-          //    }
-          //}
+          ////if (geometrystrlength < geosize)
+          ////{
+          ////    geometrystrlength = geosize;
+          ////    if (geometrystr != nullptr)
+          ////    {
+          ////        delete[] geometrystr;
+          ////        geometrystr = nullptr;
+          ////    }
+          ////}
 
-          //if (geometrystr == nullptr)
-          //    geometrystr = new char[geometrystrlength];
+          ////if (geometrystr == nullptr)
+          ////    geometrystr = new char[geometrystrlength];
 
-          localgeometrystr = new char[geosize];
+          //localgeometrystr = new char[geosize];
 
 
-          size_t pos = 0;
-          memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
-          pos += sizeof(geometrytype);
-          memcpy(localgeometrystr + pos, &geo->ellipticalDish, sizeof(geo->ellipticalDish));
-          pos += sizeof(geo->ellipticalDish);
-          memcpy(localgeometrystr + pos, &scale, sizeof(scale));
+          //size_t pos = 0;
+          //memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
+          //pos += sizeof(geometrytype);
+          //memcpy(localgeometrystr + pos, &geo->ellipticalDish, sizeof(geo->ellipticalDish));
+          //pos += sizeof(geo->ellipticalDish);
+          //memcpy(localgeometrystr + pos, &scale, sizeof(scale));
 
-          //geometrystr << geometrytype;
-          //geometrystr << geo->ellipticalDish.baseRadius;
-          //geometrystr << geo->ellipticalDish.height;
+          ////geometrystr << geometrytype;
+          ////geometrystr << geo->ellipticalDish.baseRadius;
+          ////geometrystr << geo->ellipticalDish.height;
 
-          //geometrystr << scale;
+          ////geometrystr << scale;
 
-          if (geo->triangulation == nullptr)
-              geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo,
-                  geo->ellipticalDish.baseRadius, half_pi, 0.f, geo->ellipticalDish.height / geo->ellipticalDish.baseRadius, scale);
+          //if (geo->triangulation == nullptr)
+          //    geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo,
+          //        geo->ellipticalDish.baseRadius, half_pi, 0.f, geo->ellipticalDish.height / geo->ellipticalDish.baseRadius, scale);
 
-          TriangleCount = geo->triangulation->triangles_n;
+          //TriangleCount = geo->triangulation->triangles_n;
 
-          //shape = subshape;
+          ////shape = subshape;
 
           geoname = "EllipticalDish " + std::to_string(GeoIndex) + " of ";
 
@@ -1355,59 +1354,59 @@ namespace ExportEWC{
       break;
       case Geometry::Kind::SphericalDish:
       {
-          //std::shared_ptr<e5dFace_SphericalDish> subshape = std::make_shared<e5dFace_SphericalDish>();
-          //subshape->baseRadius = geo->sphericalDish.baseRadius;
-          //subshape->height = geo->sphericalDish.height;
+          ////std::shared_ptr<e5dFace_SphericalDish> subshape = std::make_shared<e5dFace_SphericalDish>();
+          ////subshape->baseRadius = geo->sphericalDish.baseRadius;
+          ////subshape->height = geo->sphericalDish.height;
 
-          //subshape->scale = scale;
+          ////subshape->scale = scale;
 
           geometrytype = e5dFace_SphericalDish::ID;
 
-          geosize = sizeof(geometrytype) + sizeof(geo->sphericalDish) + sizeof(scale);
+          //geosize = sizeof(geometrytype) + sizeof(geo->sphericalDish) + sizeof(scale);
 
-          //if (geometrystrlength < geosize)
+          ////if (geometrystrlength < geosize)
+          ////{
+          ////    geometrystrlength = geosize;
+          ////    if (geometrystr != nullptr)
+          ////    {
+          ////        delete[] geometrystr;
+          ////        geometrystr = nullptr;
+          ////    }
+          ////}
+
+          ////if (geometrystr == nullptr)
+          ////    geometrystr = new char[geometrystrlength];
+
+          //localgeometrystr = new char[geosize];
+
+
+          //size_t pos = 0;
+          //memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
+          //pos += sizeof(geometrytype);
+          //memcpy(localgeometrystr + pos, &geo->sphericalDish, sizeof(geo->sphericalDish));
+          //pos += sizeof(geo->sphericalDish);
+          //memcpy(localgeometrystr + pos, &scale, sizeof(scale));
+
+          ////geometrystr << geometrytype;
+          ////geometrystr << geo->sphericalDish.baseRadius;
+          ////geometrystr << geo->sphericalDish.height;
+
+          ////geometrystr << scale;
+
+          //if (geo->triangulation == nullptr)
           //{
-          //    geometrystrlength = geosize;
-          //    if (geometrystr != nullptr)
-          //    {
-          //        delete[] geometrystr;
-          //        geometrystr = nullptr;
-          //    }
+          //    float r_circ = geo->sphericalDish.baseRadius;
+          //    auto h = geo->sphericalDish.height;
+          //    float r_sphere = (r_circ * r_circ + h * h) / (2.f * h);
+          //    float sinval = std::min(1.f, std::max(-1.f, r_circ / r_sphere));
+          //    float arc = asin(sinval);
+          //    if (r_circ < h) { arc = pi - arc; }
+          //    geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo, r_sphere, arc, h - r_sphere, 1.f, scale);
           //}
 
-          //if (geometrystr == nullptr)
-          //    geometrystr = new char[geometrystrlength];
+          //TriangleCount = geo->triangulation->triangles_n;
 
-          localgeometrystr = new char[geosize];
-
-
-          size_t pos = 0;
-          memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
-          pos += sizeof(geometrytype);
-          memcpy(localgeometrystr + pos, &geo->sphericalDish, sizeof(geo->sphericalDish));
-          pos += sizeof(geo->sphericalDish);
-          memcpy(localgeometrystr + pos, &scale, sizeof(scale));
-
-          //geometrystr << geometrytype;
-          //geometrystr << geo->sphericalDish.baseRadius;
-          //geometrystr << geo->sphericalDish.height;
-
-          //geometrystr << scale;
-
-          if (geo->triangulation == nullptr)
-          {
-              float r_circ = geo->sphericalDish.baseRadius;
-              auto h = geo->sphericalDish.height;
-              float r_sphere = (r_circ * r_circ + h * h) / (2.f * h);
-              float sinval = std::min(1.f, std::max(-1.f, r_circ / r_sphere));
-              float arc = asin(sinval);
-              if (r_circ < h) { arc = pi - arc; }
-              geo->triangulation = factory->sphereBasedShape(&__store->arenaTriangulation, geo, r_sphere, arc, h - r_sphere, 1.f, scale);
-          }
-
-          TriangleCount = geo->triangulation->triangles_n;
-
-          //shape = subshape;
+          ////shape = subshape;
 
           geoname = "SphericalDish " + std::to_string(GeoIndex) + " of ";
 
@@ -1416,51 +1415,51 @@ namespace ExportEWC{
       case Geometry::Kind::Cylinder:
 
       {
-          //std::shared_ptr<e5dFace_RvmCylinder> subshape = std::make_shared<e5dFace_RvmCylinder>();
-          //subshape->radius = geo->cylinder.radius;
-          //subshape->height = geo->cylinder.height;
+          ////std::shared_ptr<e5dFace_RvmCylinder> subshape = std::make_shared<e5dFace_RvmCylinder>();
+          ////subshape->radius = geo->cylinder.radius;
+          ////subshape->height = geo->cylinder.height;
 
-          //subshape->scale = scale;
+          ////subshape->scale = scale;
 
           geometrytype = e5dFace_RvmCylinder::ID;
 
-          geosize = sizeof(geometrytype) + sizeof(geo->cylinder) + sizeof(scale);
+          //geosize = sizeof(geometrytype) + sizeof(geo->cylinder) + sizeof(scale);
 
-          //if (geometrystrlength < geosize)
-          //{
-          //    geometrystrlength = geosize;
-          //    if (geometrystr != nullptr)
-          //    {
-          //        delete[] geometrystr;
-          //        geometrystr = nullptr;
-          //    }
-          //}
+          ////if (geometrystrlength < geosize)
+          ////{
+          ////    geometrystrlength = geosize;
+          ////    if (geometrystr != nullptr)
+          ////    {
+          ////        delete[] geometrystr;
+          ////        geometrystr = nullptr;
+          ////    }
+          ////}
 
-          //if (geometrystr == nullptr)
-          //    geometrystr = new char[geometrystrlength];
+          ////if (geometrystr == nullptr)
+          ////    geometrystr = new char[geometrystrlength];
 
-          localgeometrystr = new char[geosize];
+          //localgeometrystr = new char[geosize];
 
 
-          size_t pos = 0;
-          memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
-          pos += sizeof(geometrytype);
-          memcpy(localgeometrystr + pos, &geo->cylinder, sizeof(geo->cylinder));
-          pos += sizeof(geo->cylinder);
-          memcpy(localgeometrystr + pos, &scale, sizeof(scale));
+          //size_t pos = 0;
+          //memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
+          //pos += sizeof(geometrytype);
+          //memcpy(localgeometrystr + pos, &geo->cylinder, sizeof(geo->cylinder));
+          //pos += sizeof(geo->cylinder);
+          //memcpy(localgeometrystr + pos, &scale, sizeof(scale));
 
-          //geometrystr << geometrytype;
-          //geometrystr << geo->cylinder.radius;
-          //geometrystr << geo->cylinder.height;
+          ////geometrystr << geometrytype;
+          ////geometrystr << geo->cylinder.radius;
+          ////geometrystr << geo->cylinder.height;
 
-          //geometrystr << scale;
+          ////geometrystr << scale;
 
-          if (geo->triangulation == nullptr)
-              geo->triangulation = factory->cylinder(&__store->arenaTriangulation, geo, scale);
+          //if (geo->triangulation == nullptr)
+          //    geo->triangulation = factory->cylinder(&__store->arenaTriangulation, geo, scale);
 
-          TriangleCount = geo->triangulation->triangles_n;
+          //TriangleCount = geo->triangulation->triangles_n;
 
-          //shape = subshape;
+          ////shape = subshape;
 
           geoname = "Cylinder " + std::to_string(GeoIndex) + " of ";
 
@@ -1469,53 +1468,53 @@ namespace ExportEWC{
 
       case Geometry::Kind::CircularTorus:
       {
-          //std::shared_ptr<e5dFace_CircularTorus> subshape = std::make_shared<e5dFace_CircularTorus>();
-          //subshape->radius = geo->circularTorus.radius;
-          //subshape->angle = geo->circularTorus.angle;
-          //subshape->offset = geo->circularTorus.offset;
+          ////std::shared_ptr<e5dFace_CircularTorus> subshape = std::make_shared<e5dFace_CircularTorus>();
+          ////subshape->radius = geo->circularTorus.radius;
+          ////subshape->angle = geo->circularTorus.angle;
+          ////subshape->offset = geo->circularTorus.offset;
 
-          //subshape->scale = scale;
+          ////subshape->scale = scale;
 
           geometrytype = e5dFace_CircularTorus::ID;
 
-          geosize = sizeof(geometrytype) + sizeof(geo->circularTorus) + sizeof(scale);
+          //geosize = sizeof(geometrytype) + sizeof(geo->circularTorus) + sizeof(scale);
 
-          //if (geometrystrlength < geosize)
-          //{
-          //    geometrystrlength = geosize;
-          //    if (geometrystr != nullptr)
-          //    {
-          //        delete[] geometrystr;
-          //        geometrystr = nullptr;
-          //    }
-          //}
+          ////if (geometrystrlength < geosize)
+          ////{
+          ////    geometrystrlength = geosize;
+          ////    if (geometrystr != nullptr)
+          ////    {
+          ////        delete[] geometrystr;
+          ////        geometrystr = nullptr;
+          ////    }
+          ////}
 
-          //if (geometrystr == nullptr)
-          //    geometrystr = new char[geometrystrlength];
+          ////if (geometrystr == nullptr)
+          ////    geometrystr = new char[geometrystrlength];
 
-          localgeometrystr = new char[geosize];
+          //localgeometrystr = new char[geosize];
 
 
-          size_t pos = 0;
-          memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
-          pos += sizeof(geometrytype);
-          memcpy(localgeometrystr + pos, &geo->circularTorus, sizeof(geo->circularTorus));
-          pos += sizeof(geo->circularTorus);
-          memcpy(localgeometrystr + pos, &scale, sizeof(scale));
+          //size_t pos = 0;
+          //memcpy(localgeometrystr, &geometrytype, sizeof(geometrytype));
+          //pos += sizeof(geometrytype);
+          //memcpy(localgeometrystr + pos, &geo->circularTorus, sizeof(geo->circularTorus));
+          //pos += sizeof(geo->circularTorus);
+          //memcpy(localgeometrystr + pos, &scale, sizeof(scale));
 
-          //geometrystr << geometrytype;
-          //geometrystr << geo->circularTorus.radius;
-          //geometrystr << geo->circularTorus.angle;
-          //geometrystr << geo->circularTorus.offset;
+          ////geometrystr << geometrytype;
+          ////geometrystr << geo->circularTorus.radius;
+          ////geometrystr << geo->circularTorus.angle;
+          ////geometrystr << geo->circularTorus.offset;
 
-          //geometrystr << scale;
+          ////geometrystr << scale;
 
-          if (geo->triangulation == nullptr)
-              geo->triangulation = factory->circularTorus(&__store->arenaTriangulation, geo, scale);
+          //if (geo->triangulation == nullptr)
+          //    geo->triangulation = factory->circularTorus(&__store->arenaTriangulation, geo, scale);
 
-          TriangleCount = geo->triangulation->triangles_n;
+          //TriangleCount = geo->triangulation->triangles_n;
 
-          //shape = subshape;
+          ////shape = subshape;
 
           geoname = "CircularTorus " + std::to_string(GeoIndex) + " of ";
 
@@ -1528,6 +1527,24 @@ namespace ExportEWC{
       }
 
 #endif
+
+
+      size_t geosize = 0;
+
+      char* localgeometrystr = nullptr;
+
+      if (!__store->serializeGeometry(geo, localgeometrystr, geosize))
+      {
+          ctx.logger(1, "serialize error,%s", instName);
+          return false;
+      }
+
+      //{
+      //    //测试反序列化
+      //    Geometry testgeo;
+      //    Store::deserializeGeometry(localgeometrystr, geosize, &testgeo);
+      //    Store::DeleteFacetGroup(&testgeo);
+      //}
 
       long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
 
@@ -1576,11 +1593,12 @@ namespace ExportEWC{
       //Shape2Binary(shape, binstr);
 #endif
 
-      if (localgeometrystr != nullptr)
-      {
-          delete[] localgeometrystr;
-          localgeometrystr = nullptr;
-      }
+      //Store管理不用delete
+      //if (localgeometrystr != nullptr)
+      //{
+      //    delete[] localgeometrystr;
+      //    localgeometrystr = nullptr;
+      //}
 
       e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
 

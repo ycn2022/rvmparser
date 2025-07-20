@@ -3,6 +3,7 @@
 #include <cstring>
 #include "Store.h"
 #include "StoreVisitor.h"
+#include "LinAlgOps.h"
 
 
 
@@ -29,6 +30,8 @@ Store::Store()
   debugLines.clear();
   connections.clear();
   setErrorString("");
+
+  geometryBinaryReuse = (char*)arenaGeometryBinary.alloc(geometryBinaryLength);
 }
 
 Color* Store::newColor(Node* parent)
@@ -167,6 +170,602 @@ Geometry* Store::cloneGeometry(Node* parent, const Geometry* src)
   return dst;
 }
 
+bool Store::serializeGeometry(const Geometry* geo, char*& binary, size_t& geosize)
+{
+    auto scale = getScale(geo->M_3x4);
+
+    int TriangleCount = geo->triangulation ? geo->triangulation->triangles_n : -1;
+
+    //统一加上100
+    int rvmkind = (int)geo->kind + 100;
+
+    switch (geo->kind) {
+
+    case Geometry::Kind::Pyramid:
+    {
+        geosize =  sizeof(int)  + sizeof(geo->pyramid) + sizeof(TriangleCount);
+
+        ResizeGeometryBinaryReuse(geosize);
+
+        size_t pos = 0;
+        memcpy(geometryBinaryReuse, &rvmkind,  sizeof(int) );
+        pos += sizeof(int);
+        memcpy(geometryBinaryReuse + pos, &geo->pyramid, sizeof(geo->pyramid));
+        pos += sizeof(geo->pyramid);
+        memcpy(geometryBinaryReuse + pos, &TriangleCount, sizeof(TriangleCount));
+
+
+
+    }
+    break;
+    case Geometry::Kind::Box:
+    {
+
+        geosize =  sizeof(int)  + sizeof(Geometry::box) + sizeof(TriangleCount);
+
+        ResizeGeometryBinaryReuse(geosize);
+
+        size_t pos = 0;
+        memcpy(geometryBinaryReuse, &rvmkind,  sizeof(int) );
+        pos += sizeof(int);
+        memcpy(geometryBinaryReuse + pos, &geo->box, sizeof(Geometry::box));
+        pos += sizeof(Geometry::box);
+        memcpy(geometryBinaryReuse + pos, &TriangleCount, sizeof(TriangleCount));
+
+    }
+    break;
+    case Geometry::Kind::RectangularTorus:
+    {
+
+        geosize =  sizeof(int)  + sizeof(geo->rectangularTorus) + sizeof(scale) +
+            sizeof(geo->sampleStartAngle) + sizeof(TriangleCount);
+
+        ResizeGeometryBinaryReuse(geosize);
+
+        size_t pos = 0;
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
+        pos +=  sizeof(int) ;
+        memcpy(geometryBinaryReuse + pos, &geo->rectangularTorus, sizeof(geo->rectangularTorus));
+        pos += sizeof(geo->rectangularTorus);
+        memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(geometryBinaryReuse + pos, &geo->sampleStartAngle, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(geometryBinaryReuse + pos, &TriangleCount, sizeof(TriangleCount));
+
+
+
+    }
+    break;
+    case Geometry::Kind::Sphere:
+    {
+
+        geosize = sizeof(int) + sizeof(geo->sphere) + sizeof(scale) +
+            sizeof(geo->sampleStartAngle) + sizeof(TriangleCount);
+
+        ResizeGeometryBinaryReuse(geosize);
+
+
+        size_t pos = 0;
+        memcpy(geometryBinaryReuse, &rvmkind,  sizeof(int) );
+        pos += sizeof(int);
+        memcpy(geometryBinaryReuse + pos, &geo->sphere, sizeof(geo->sphere));
+        pos += sizeof(geo->sphere);
+        memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(geometryBinaryReuse + pos, &geo->sampleStartAngle, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(geometryBinaryReuse + pos, &TriangleCount, sizeof(TriangleCount));
+
+
+    }
+    break;
+    case Geometry::Kind::Line:
+        break;
+    case Geometry::Kind::FacetGroup:
+    {
+        geosize =  sizeof(int)  + sizeof(geo->facetGroup.polygons_n);
+        for (size_t i = 0; i < geo->facetGroup.polygons_n; i++)
+        {
+            auto& polygon = geo->facetGroup.polygons[i];
+
+            geosize += sizeof(polygon.contours_n);
+            
+            for (size_t j = 0; j < polygon.contours_n; j++)
+            {
+                auto& contour = polygon.contours[j];
+
+                geosize += sizeof(contour.vertices_n) + sizeof(float) * contour.vertices_n * 6;
+                
+            }
+        }
+        geosize+= sizeof(TriangleCount);
+
+        ResizeGeometryBinaryReuse(geosize);
+
+        size_t pos = 0;
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
+        pos +=  sizeof(int) ;
+        memcpy(geometryBinaryReuse + pos, &geo->facetGroup.polygons_n, sizeof(geo->facetGroup.polygons_n));
+        pos += sizeof(geo->facetGroup.polygons_n);
+
+        for (size_t i = 0; i < geo->facetGroup.polygons_n; i++)
+        {
+            auto& polygon = geo->facetGroup.polygons[i];
+
+            memcpy(geometryBinaryReuse + pos, &polygon.contours_n, sizeof(polygon.contours_n));
+            pos += sizeof(polygon.contours_n);
+
+            for (size_t j = 0; j < polygon.contours_n; j++)
+            {
+                auto& contour = polygon.contours[j];
+
+                memcpy(geometryBinaryReuse + pos, &contour.vertices_n, sizeof(contour.vertices_n));
+                pos += sizeof(contour.vertices_n);
+
+                memcpy(geometryBinaryReuse + pos, contour.vertices, sizeof(float)* contour.vertices_n * 3);
+                pos += sizeof(float) * contour.vertices_n * 3;
+                memcpy(geometryBinaryReuse + pos, contour.normals, sizeof(float)* contour.vertices_n * 3);
+                pos += sizeof(float) * contour.vertices_n * 3;
+
+                //for (size_t k = 0; k < contour.vertices_n; k++)
+                //{
+                //    memcpy(geometryBinaryReuse + pos, contour.vertices, sizeof(float) * contour.vertices_n * 3);
+                //    pos += sizeof(float) * contour.vertices_n * 3;
+                //    memcpy(geometryBinaryReuse + pos, contour.normals, sizeof(float) * contour.vertices_n * 3);
+                //    pos += sizeof(float) * contour.vertices_n * 3;
+                //}
+
+            }
+        }
+
+        memcpy(geometryBinaryReuse + pos, &TriangleCount, sizeof(TriangleCount));
+
+    }
+    break;
+
+    case Geometry::Kind::Snout:
+    {
+
+        geosize = sizeof(int) + sizeof(geo->snout) + sizeof(scale) +
+            sizeof(geo->sampleStartAngle) + sizeof(TriangleCount);
+
+        ResizeGeometryBinaryReuse(geosize);
+
+
+        size_t pos = 0;
+        memcpy(geometryBinaryReuse, &rvmkind,  sizeof(int) );
+        pos += sizeof(int);
+        memcpy(geometryBinaryReuse + pos, &geo->snout, sizeof(geo->snout));
+        pos += sizeof(geo->snout);
+        memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(geometryBinaryReuse + pos, &geo->sampleStartAngle, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(geometryBinaryReuse + pos, &TriangleCount, sizeof(TriangleCount));
+
+
+
+    }
+    break;
+    case Geometry::Kind::EllipticalDish:
+    {
+
+        geosize =  sizeof(int)  + sizeof(geo->ellipticalDish) + sizeof(scale) +
+            sizeof(geo->sampleStartAngle) + sizeof(TriangleCount);
+
+        ResizeGeometryBinaryReuse(geosize);
+
+
+        size_t pos = 0;
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
+        pos +=  sizeof(int) ;
+        memcpy(geometryBinaryReuse + pos, &geo->ellipticalDish, sizeof(geo->ellipticalDish));
+        pos += sizeof(geo->ellipticalDish);
+        memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(geometryBinaryReuse + pos, &geo->sampleStartAngle, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(geometryBinaryReuse + pos, &TriangleCount, sizeof(TriangleCount));
+
+
+    }
+    break;
+    case Geometry::Kind::SphericalDish:
+    {
+
+        geosize = sizeof(int) + sizeof(geo->sphericalDish) + sizeof(scale) +
+            sizeof(geo->sampleStartAngle) + sizeof(TriangleCount);
+
+        ResizeGeometryBinaryReuse(geosize);
+
+        size_t pos = 0;
+        memcpy(geometryBinaryReuse, &rvmkind,  sizeof(int) );
+        pos += sizeof(int);
+        memcpy(geometryBinaryReuse + pos, &geo->sphericalDish, sizeof(geo->sphericalDish));
+        pos += sizeof(geo->sphericalDish);
+        memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(geometryBinaryReuse + pos, &geo->sampleStartAngle, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(geometryBinaryReuse + pos, &TriangleCount, sizeof(TriangleCount));
+
+    }
+    break;
+    case Geometry::Kind::Cylinder:
+    {
+        geosize =  sizeof(int)  + sizeof(geo->cylinder) + sizeof(scale) +
+            sizeof(geo->sampleStartAngle) + sizeof(TriangleCount);
+
+        ResizeGeometryBinaryReuse(geosize);
+
+        size_t pos = 0;
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
+        pos +=  sizeof(int) ;
+        memcpy(geometryBinaryReuse + pos, &geo->cylinder, sizeof(geo->cylinder));
+        pos += sizeof(geo->cylinder);
+        memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(geometryBinaryReuse + pos, &geo->sampleStartAngle, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(geometryBinaryReuse + pos, &TriangleCount, sizeof(TriangleCount));
+
+    }
+    break;
+
+    case Geometry::Kind::CircularTorus:
+    {
+        geosize = sizeof(int) + sizeof(geo->circularTorus) + sizeof(scale) +
+            sizeof(geo->sampleStartAngle) + sizeof(TriangleCount);
+
+        ResizeGeometryBinaryReuse(geosize);
+
+        size_t pos = 0;
+        memcpy(geometryBinaryReuse, &rvmkind,  sizeof(int) );
+        pos += sizeof(int);
+        memcpy(geometryBinaryReuse + pos, &geo->circularTorus, sizeof(geo->circularTorus));
+        pos += sizeof(geo->circularTorus);
+        memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(geometryBinaryReuse + pos, &geo->sampleStartAngle, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(geometryBinaryReuse + pos, &TriangleCount, sizeof(TriangleCount));
+
+
+    }
+    break;
+
+    default:
+        assert(false && "Illegal kind");
+        break;
+    }
+
+    if (geosize > 0)
+    {
+        binary = geometryBinaryReuse;
+        return true;
+    }
+
+    return false;
+}
+
+bool Store::deserializeGeometry(const char* buffer, const size_t& bufsize, Geometry* geo)
+{
+    Geometry::Kind geometrytype = Geometry::Kind::Line;
+
+    if (bufsize < sizeof(int))
+        return false;
+
+    size_t pos = 0;
+
+    int geosize = 0;
+
+    int TriangleCount = 0;
+
+    float scale = 1.f;
+
+    float sampleStartAngle = 0.f;
+
+    int rvmkind = 0;
+
+    memcpy(&rvmkind, buffer, sizeof(int));
+
+    //-100 还原
+    rvmkind = rvmkind - 100;
+
+    if (rvmkind >= 0 && rvmkind <= 10)
+    {
+        geometrytype = (Geometry::Kind)rvmkind;
+    }
+    else
+    {
+        return false;
+    }
+
+    pos += sizeof(geometrytype);
+
+    switch (geometrytype)
+    {
+    case Geometry::Kind::Box:
+    {
+        geosize = sizeof(int) + sizeof(Geometry::box) + sizeof(TriangleCount);
+
+        if (geosize != bufsize)
+            return false;
+
+        //Geometry* geo = new Geometry();
+
+        geo->kind = Geometry::Kind::Box;
+        memcpy(&geo->box, buffer + pos, sizeof(Geometry::box));
+        pos += sizeof(Geometry::box);
+        memcpy(&TriangleCount, buffer + pos, sizeof(TriangleCount));
+
+        return true;
+    }
+    break;
+    case Geometry::Kind::CircularTorus:
+    {
+        geosize = sizeof(int) + sizeof(Geometry::circularTorus) + sizeof(scale) +
+            sizeof(sampleStartAngle) + sizeof(TriangleCount);
+
+        if (geosize != bufsize)
+            return false;
+
+        //Geometry* geo = new Geometry();
+
+        geo->kind = Geometry::Kind::CircularTorus;
+        memcpy(&geo->circularTorus, buffer + pos, sizeof(geo->circularTorus));
+        pos += sizeof(geo->circularTorus);
+        memcpy(&scale, buffer + pos, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(&geo->sampleStartAngle, buffer + pos, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(&TriangleCount, buffer + pos, sizeof(TriangleCount));
+
+        return true;
+    }
+    break;
+    case Geometry::Kind::Cylinder:
+    {
+        geosize = sizeof(int) + sizeof(Geometry::cylinder) + sizeof(scale) +
+            sizeof(sampleStartAngle) + sizeof(TriangleCount);
+
+        if (geosize != bufsize)
+            return false;
+
+        //Geometry* geo = new Geometry();
+        geo->kind = Geometry::Kind::Cylinder;
+        memcpy(&geo->cylinder, buffer + pos, sizeof(geo->cylinder));
+        pos += sizeof(geo->cylinder);
+        memcpy(&scale, buffer + pos, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(&geo->sampleStartAngle, buffer + pos, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(&TriangleCount, buffer + pos, sizeof(TriangleCount));
+
+        return true;
+
+    }
+    break;
+    case Geometry::Kind::EllipticalDish:
+    {
+        geosize = sizeof(int) + sizeof(Geometry::ellipticalDish) + sizeof(scale) +
+            sizeof(sampleStartAngle) + sizeof(TriangleCount);
+
+        if (geosize != bufsize)
+            return false;
+
+        //Geometry* geo = new Geometry();
+        geo->kind = Geometry::Kind::EllipticalDish;
+        memcpy(&geo->ellipticalDish, buffer + pos, sizeof(geo->ellipticalDish));
+        pos += sizeof(geo->ellipticalDish);
+        memcpy(&scale, buffer + pos, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(&geo->sampleStartAngle, buffer + pos, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(&TriangleCount, buffer + pos, sizeof(TriangleCount));
+
+        return true;
+    }
+    break;
+    case Geometry::Kind::FacetGroup:
+    {
+        geosize = sizeof(int) + sizeof(uint32_t);
+
+        if (bufsize < geosize)
+            return false;
+
+        //Geometry* geo = new Geometry();
+
+        memcpy(&geo->facetGroup.polygons_n, buffer + pos, sizeof(uint32_t));
+        pos += sizeof(uint32_t);
+
+        geo->facetGroup.polygons = new Polygon[geo->facetGroup.polygons_n];
+
+        for (size_t i = 0; i < geo->facetGroup.polygons_n; i++)
+        {
+            geosize += sizeof(uint32_t);
+
+            if (bufsize < geosize)
+            {
+                DeleteFacetGroup(geo);
+                return false;
+            }
+
+            auto& polygon = geo->facetGroup.polygons[i];
+
+            memcpy(&polygon.contours_n, buffer + pos, sizeof(uint32_t));
+            pos += sizeof(uint32_t);
+
+            polygon.contours = new Contour[polygon.contours_n];
+
+            for (size_t j = 0; j < polygon.contours_n; j++)
+            {
+                geosize += sizeof(uint32_t);
+
+                if (bufsize < geosize)
+                {
+                    DeleteFacetGroup(geo);
+                    return false;
+                }
+
+                auto& contour = polygon.contours[j];
+
+                memcpy(&contour.vertices_n, buffer + pos, sizeof(uint32_t));
+                pos += sizeof(uint32_t);
+
+                geosize += sizeof(float) * contour.vertices_n * 6;
+
+                if (bufsize < geosize)
+                {
+                    DeleteFacetGroup(geo);
+                    return false;
+                }
+
+                contour.vertices = new float[contour.vertices_n * 3];
+                contour.normals = new float[contour.vertices_n * 3];
+
+                memcpy(contour.vertices, buffer + pos, sizeof(float)* contour.vertices_n * 3);
+                pos += sizeof(float) * contour.vertices_n * 3;
+                memcpy(contour.normals, buffer + pos, sizeof(float)* contour.vertices_n * 3);
+                pos += sizeof(float) * contour.vertices_n * 3;
+
+                //for (size_t k = 0; k < contour.vertices_n; k++)
+                //{
+                //    geosize += sizeof(float) * 6;
+
+                //    if (bufsize < geosize)
+                //    {
+                //        DeleteFacetGroup(geo);
+                //        return nullptr;
+                //    }
+
+
+                //}
+            }
+
+        }
+        geosize += sizeof(TriangleCount);
+        if (bufsize < geosize)
+        {
+            DeleteFacetGroup(geo);
+            return false;
+        }
+        memcpy(&TriangleCount, buffer + pos, sizeof(TriangleCount));
+
+        geo->kind = Geometry::Kind::FacetGroup;
+
+        return true;
+
+    }
+    break;
+    case Geometry::Kind::Pyramid:
+    {
+        geosize = sizeof(int) + sizeof(Geometry::pyramid) + sizeof(TriangleCount);
+
+        if (geosize != bufsize)
+            return false;
+
+        //Geometry* geo = new Geometry();
+        geo->kind = Geometry::Kind::Pyramid;
+        memcpy(&geo->pyramid, buffer + pos, sizeof(geo->pyramid));
+        pos += sizeof(geo->pyramid);
+        memcpy(&TriangleCount, buffer + pos, sizeof(TriangleCount));
+
+        return true;
+    }
+    break;
+    case Geometry::Kind::RectangularTorus:
+    {
+        geosize = sizeof(int) + sizeof(Geometry::rectangularTorus) + sizeof(scale) +
+            sizeof(sampleStartAngle) + sizeof(TriangleCount);
+
+        if (geosize != bufsize)
+            return false;
+
+        //Geometry* geo = new Geometry();
+        geo->kind = Geometry::Kind::RectangularTorus;
+        memcpy(&geo->rectangularTorus, buffer + pos, sizeof(geo->rectangularTorus));
+        pos += sizeof(geo->rectangularTorus);
+        memcpy(&scale, buffer + pos, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(&geo->sampleStartAngle, buffer + pos, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(&TriangleCount, buffer + pos, sizeof(TriangleCount));
+        
+        return true;
+    }
+    break;
+    case Geometry::Kind::Snout:
+    {
+        geosize = sizeof(int) + sizeof(Geometry::snout) + sizeof(scale) +
+            sizeof(sampleStartAngle) + sizeof(TriangleCount);
+
+        if (geosize != bufsize)
+            return false;
+
+        //Geometry* geo = new Geometry();
+        geo->kind = Geometry::Kind::Snout;
+        memcpy(&geo->snout, buffer + pos, sizeof(geo->snout));
+        pos += sizeof(geo->snout);
+        memcpy(&scale, buffer + pos, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(&geo->sampleStartAngle, buffer + pos, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(&TriangleCount, buffer + pos, sizeof(TriangleCount));
+
+        return true;
+    }
+    break;
+    case Geometry::Kind::SphericalDish:
+    {
+        geosize = sizeof(int) + sizeof(Geometry::sphericalDish) + sizeof(scale) +
+            sizeof(sampleStartAngle) + sizeof(TriangleCount);
+
+        if (geosize != bufsize)
+            return false;
+
+        //Geometry* geo = new Geometry();
+        geo->kind = Geometry::Kind::SphericalDish;
+        memcpy(&geo->sphericalDish, buffer + pos, sizeof(geo->sphericalDish));
+        pos += sizeof(geo->sphericalDish);
+        memcpy(&scale, buffer + pos, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(&geo->sampleStartAngle, buffer + pos, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(&TriangleCount, buffer + pos, sizeof(TriangleCount));
+        
+        return true;
+    }
+    break;
+    case Geometry::Kind::Sphere:
+    {
+        geosize = sizeof(int) + sizeof(Geometry::sphere) + sizeof(scale) +
+            sizeof(sampleStartAngle) + sizeof(TriangleCount);
+
+        if (geosize != bufsize)
+            return false;
+
+        //Geometry* geo = new Geometry();
+        geo->kind = Geometry::Kind::Sphere;
+        memcpy(&geo->sphere, buffer + pos, sizeof(geo->sphere));
+        pos += sizeof(geo->sphere);
+        memcpy(&scale, buffer + pos, sizeof(scale));
+        pos += sizeof(scale);
+        memcpy(&geo->sampleStartAngle, buffer + pos, sizeof(geo->sampleStartAngle));
+        pos += sizeof(geo->sampleStartAngle);
+        memcpy(&TriangleCount, buffer + pos, sizeof(TriangleCount));
+
+        return true;
+    }
+    break;
+    default:
+        break;
+    }
+
+    return false;
+}
+
 
 Node* Store::newNode(Node* parent, Node::Kind kind)
 {
@@ -291,6 +890,58 @@ void Store::apply(StoreVisitor* visitor, Node* group)
   }
 
   visitor->EndGroup();
+}
+
+void Store::ResizeGeometryBinaryReuse(const int& RequestLen)
+{
+    if (geometryBinaryLength < RequestLen)
+    {
+        geometryBinaryLength = RequestLen;
+        arenaGeometryBinary.clear();
+        geometryBinaryReuse = nullptr;
+    }
+
+    if (geometryBinaryReuse == nullptr)
+        geometryBinaryReuse = (char*)arenaGeometryBinary.alloc(geometryBinaryLength);
+}
+
+void Store::DeleteFacetGroup(Geometry* geo)
+{
+    if (geo == nullptr || geo->kind != Geometry::Kind::FacetGroup)
+        return;
+
+    if (geo->facetGroup.polygons)
+    {
+        for (size_t i = 0; i < geo->facetGroup.polygons_n; i++)
+        {
+            auto& polygon = geo->facetGroup.polygons[i];
+            if (polygon.contours)
+            {
+                for (size_t j = 0; j < polygon.contours_n; j++)
+                {
+                    auto& contour = polygon.contours[j];
+                    if (contour.vertices)
+                    {
+                        delete[] contour.vertices;
+                        contour.vertices = nullptr;
+                    }
+                    if (contour.normals)
+                    {
+                        delete[] contour.normals;
+                        contour.normals = nullptr;
+                    }
+                    contour.vertices_n = 0;
+                }
+                delete[] polygon.contours;
+                polygon.contours = nullptr;
+                polygon.contours_n = 0;
+            }
+        }
+
+        delete[] geo->facetGroup.polygons;
+        geo->facetGroup.polygons = nullptr;
+        geo->facetGroup.polygons_n = 0;
+    }
 }
 
 void Store::apply(StoreVisitor* visitor)
