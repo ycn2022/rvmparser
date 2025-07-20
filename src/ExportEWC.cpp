@@ -2187,7 +2187,7 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
       .logger = logger
     };
 
-    ctx.logger(0, "exportEWC: rotate-z-to-y=%u center=%u attributes=%u",
+    ctx.logger(0, "export: rotate-z-to-y=%u center=%u attributes=%u",
         ctx.rotateZToY ? 1 : 0,
         ctx.centerModel ? 1 : 0,
         ctx.includeAttributes ? 1 : 0);
@@ -2205,7 +2205,7 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
         }
         else
         {
-            ctx.logger(1, "EWC文件已存在，正在移动到回收站: %s", ewcfilename.c_str());
+            ctx.logger(1, "文件已存在，正在移动到回收站: %s", ewcfilename.c_str());
             if (MoveFileToRecycleBin(ewcfilename)) {
                 ctx.logger(1, "成功将文件移动到回收站: %s", ewcfilename.c_str());
             }
@@ -2225,7 +2225,7 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
             }
             else
             {
-                ctx.logger(1, "EWC文件已存在，正在移动到回收站: %s", wal.c_str());
+                ctx.logger(1, "文件已存在，正在移动到回收站: %s", wal.c_str());
                 if (MoveFileToRecycleBin(wal)) {
                     ctx.logger(1, "成功将文件移动到回收站: %s", wal.c_str());
                 }
@@ -2246,7 +2246,7 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
             }
             else
             {
-                ctx.logger(1, "EWC文件已存在，正在移动到回收站: %s", wal.c_str());
+                ctx.logger(1, "文件已存在，正在移动到回收站: %s", wal.c_str());
                 if (MoveFileToRecycleBin(wal)) {
                     ctx.logger(1, "成功将文件移动到回收站: %s", wal.c_str());
                 }
@@ -2271,7 +2271,7 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
     std::uintmax_t TempDbFileSize = 0;
     if (std::filesystem::exists(ewcfilename)) {
         TempDbFileSize = std::filesystem::file_size(ewcfilename);
-        ctx.logger(1, "EWC文件初始大小: %zu bytes", static_cast<size_t>(TempDbFileSize));
+        ctx.logger(1, "文件初始大小: %zu bytes", static_cast<size_t>(TempDbFileSize));
     }
 
     if(!IsValidUTF8(ewcfilename.data()))
@@ -2638,19 +2638,19 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
     // da.CloseLocalDatabase();之后再次检查文件大小，如果相等，则删除ewcfilename
     if (std::filesystem::exists(ewcfilename)) {
         std::uintmax_t currentFileSize = std::filesystem::file_size(ewcfilename);
-        ctx.logger(1, "EWC文件关闭后大小: %zu bytes", static_cast<size_t>(currentFileSize));
+        ctx.logger(1, "文件关闭后大小: %zu bytes", static_cast<size_t>(currentFileSize));
         
         if (currentFileSize == TempDbFileSize) {
-            ctx.logger(1, "EWC文件大小未变化，正在删除文件: %s", ewcfilename.c_str());
+            ctx.logger(1, "文件大小未变化，正在删除文件: %s", ewcfilename.c_str());
             if (std::filesystem::remove(ewcfilename)) {
-                ctx.logger(1, "成功删除EWC文件: %s", ewcfilename.c_str());
+                ctx.logger(1, "成功删除文件: %s", ewcfilename.c_str());
             } else {
-                ctx.logger(2, "删除EWC文件失败: %s", ewcfilename.c_str());
+                ctx.logger(2, "删除文件失败: %s", ewcfilename.c_str());
             }
 
             return false;
         } else {
-            ctx.logger(1, "EWC文件大小已变化，保留文件: %s (初始: %zu bytes, 当前: %zu bytes)", 
+            ctx.logger(1, "文件大小已变化，保留文件: %s (初始: %zu bytes, 当前: %zu bytes)", 
                 ewcfilename.c_str(), static_cast<size_t>(TempDbFileSize), static_cast<size_t>(currentFileSize));
         }
     }
