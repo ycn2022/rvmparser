@@ -118,4 +118,4 @@ bool exportGLTF(Store* store, Logger logger, const char* path, size_t splitLevel
 bool exportNamedPipe(Store* store, Logger logger, const std::string& pipename);
 
 
-bool exportEWC(Store* store, Logger logger, const std::string& filename);
+bool exportEWC(Store* store, Logger logger, const std::string& filename, const bool& delexistfile);

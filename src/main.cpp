@@ -585,6 +585,9 @@ int main(int argc, char** argv)
 {
   int rv = 0;
 
+  //直接删除，还是进回收站
+  bool delexistfile = false;
+
   bool should_colorize = true;
   std::string color_attribute;
 
@@ -607,6 +610,11 @@ int main(int argc, char** argv)
 
               continue;
           }
+          else if (arg == "--delold") {
+
+              delexistfile = true;
+              continue;
+          }
 
           auto e = arg.find('=');
           if (e != std::string::npos) {
@@ -615,6 +623,7 @@ int main(int argc, char** argv)
               if (key == "--guid")
               {
                   pipename = val;
+                  continue;
               }
               else if (key == "--keep-groups") {
 
@@ -754,7 +763,7 @@ int main(int argc, char** argv)
   }
 
   auto time0 = std::chrono::high_resolution_clock::now();
-  if (exportEWC(store, logger, filename))
+  if (exportEWC(store, logger, filename, delexistfile))
   {
       long long e = std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
       logger(0, "Exported  in %lldms", e);

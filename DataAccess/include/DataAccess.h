@@ -86,7 +86,7 @@ namespace Studio {
         bool SetCacheSize(const int64_t& cache_size);
         bool SetMMapSize(const int64_t& mmap_size);
 
-        //bool SetPageSize(const int& page_size);
+        bool SetPageSize(const int& page_size);
 
         bool SetWalAutoCheckpoint(const int& autocheckpoint);
 
@@ -97,6 +97,8 @@ namespace Studio {
         bool DeleteIndexBeforeBatch();
 
         bool ReIndexAfterBatch();
+
+        bool CreateInitIndex();
 
         // 数据操作方法
         bool GetMaxId(const std::string& tabname, int64_t& maxid);
@@ -124,6 +126,21 @@ namespace Studio {
         // 数据库路径
         std::string E5dDbPath;
 
+
+        bool WALMode = true;
+
+        bool SynchronousOff = true;
+
+        bool CreateIndex = true;
+
+        bool TransactionWhenOpen = true;
+
+        int PageSize = 2 * 1024 * 1024;
+
+        int64_t CacheSize = -256 * 1024 * 1024;
+
+        int64_t MMapSize = 268435456;
+
         int AutoCommitNum = 5000;
         std::atomic<int> PendingCommitBatchNum = 0;
 
@@ -132,6 +149,8 @@ namespace Studio {
         std::string m_lastError;
         bool m_isCompressedDB;
         bool m_transactioning;
+
+        bool m_indexInited = false;
 
         // 预编译语句
         sqlite3_stmt* m_addModelCmd;

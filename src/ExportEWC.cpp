@@ -370,6 +370,34 @@ namespace ExportEWC{
       return (result == 0);
   }
 
+  bool GetClusterSize(const wchar_t* path, DWORD& clusterSize) {
+      // Step 1: 获取挂载点的卷路径
+      WCHAR volumePath[MAX_PATH];
+      if (!GetVolumePathName(path, volumePath, MAX_PATH)) {
+          std::wcerr << L"Failed to get volume path. Error code: " << GetLastError() << std::endl;
+          return false;
+      }
+
+      // Step 2: 获取卷的唯一标识（GUID）
+      WCHAR volumeName[MAX_PATH];
+      if (!GetVolumeNameForVolumeMountPoint(volumePath, volumeName, MAX_PATH)) {
+          std::wcerr << L"Failed to get volume name. Error code: " << GetLastError() << std::endl;
+          return false;
+      }
+
+      // Step 3: 查询卷的簇大小
+      DWORD sectorsPerCluster, bytesPerSector, numberOfFreeClusters, totalNumberOfClusters;
+      if (GetDiskFreeSpace(volumeName, &sectorsPerCluster, &bytesPerSector,
+          &numberOfFreeClusters, &totalNumberOfClusters)) {
+          clusterSize = sectorsPerCluster * bytesPerSector; // 簇大小 = 每簇扇区数 * 每扇区字节数
+          return true;
+      }
+      else {
+          std::wcerr << L"Failed to get cluster size. Error code: " << GetLastError() << std::endl;
+          return false;
+      }
+  }
+
   //uint32_t addDataItem(Context& /*ctx*/, Model& model, const void* ptr, size_t size, bool copy)
   //{
   //  assert((size % 4) == 0);
@@ -2105,7 +2133,7 @@ namespace ExportEWC{
 
 using namespace ExportEWC;
 
-bool exportEWC(Store* store, Logger logger, const std::string& filename)
+bool exportEWC(Store* store, Logger logger, const std::string& filename,const bool& delexistfile)
 {
 
     //获取当前可执行文件目录下的 e5dstudio_template.db 文件绝对路径
@@ -2167,25 +2195,40 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
 
     // 检查文件是否存在，如果存在则移动到回收站
     if (std::filesystem::exists(ewcfilename)) {
-        ctx.logger(1, "EWC文件已存在，正在移动到回收站: %s", ewcfilename.c_str());
-        if (MoveFileToRecycleBin(ewcfilename)) {
-            ctx.logger(1, "成功将文件移动到回收站: %s", ewcfilename.c_str());
-        } else {
-            ctx.logger(2, "移动文件到回收站失败: %s", ewcfilename.c_str());
-            return false;
+        if (delexistfile)
+        {
+            std::filesystem::remove(ewcfilename);
+        }
+        else
+        {
+            ctx.logger(1, "EWC文件已存在，正在移动到回收站: %s", ewcfilename.c_str());
+            if (MoveFileToRecycleBin(ewcfilename)) {
+                ctx.logger(1, "成功将文件移动到回收站: %s", ewcfilename.c_str());
+            }
+            else {
+                ctx.logger(2, "移动文件到回收站失败: %s", ewcfilename.c_str());
+                return false;
+            }
         }
     }
     {
         std::string wal = ewcfilename + "-wal";
         // 检查文件是否存在，如果存在则移动到回收站
         if (std::filesystem::exists(wal)) {
-            ctx.logger(1, "EWC文件已存在，正在移动到回收站: %s", wal.c_str());
-            if (MoveFileToRecycleBin(wal)) {
-                ctx.logger(1, "成功将文件移动到回收站: %s", wal.c_str());
+            if (delexistfile)
+            {
+                std::filesystem::remove(wal);
             }
-            else {
-                ctx.logger(2, "移动文件到回收站失败: %s", wal.c_str());
-                return false;
+            else
+            {
+                ctx.logger(1, "EWC文件已存在，正在移动到回收站: %s", wal.c_str());
+                if (MoveFileToRecycleBin(wal)) {
+                    ctx.logger(1, "成功将文件移动到回收站: %s", wal.c_str());
+                }
+                else {
+                    ctx.logger(2, "移动文件到回收站失败: %s", wal.c_str());
+                    return false;
+                }
             }
         }
     }
@@ -2193,13 +2236,20 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
         std::string wal = ewcfilename + "-shm";
         // 检查文件是否存在，如果存在则移动到回收站
         if (std::filesystem::exists(wal)) {
-            ctx.logger(1, "EWC文件已存在，正在移动到回收站: %s", wal.c_str());
-            if (MoveFileToRecycleBin(wal)) {
-                ctx.logger(1, "成功将文件移动到回收站: %s", wal.c_str());
+            if (delexistfile)
+            {
+                std::filesystem::remove(wal);
             }
-            else {
-                ctx.logger(2, "移动文件到回收站失败: %s", wal.c_str());
-                return false;
+            else
+            {
+                ctx.logger(1, "EWC文件已存在，正在移动到回收站: %s", wal.c_str());
+                if (MoveFileToRecycleBin(wal)) {
+                    ctx.logger(1, "成功将文件移动到回收站: %s", wal.c_str());
+                }
+                else {
+                    ctx.logger(2, "移动文件到回收站失败: %s", wal.c_str());
+                    return false;
+                }
             }
         }
     }
@@ -2210,7 +2260,7 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
     std::string outputcleanfilename = std::filesystem::path(ewcfilename).filename().string();
 
 
-    E5D::Studio::DataAccessUtil::EnsureDatabase(outputfolder, outputcleanfilename, templatedbfilename);
+    //E5D::Studio::DataAccessUtil::EnsureDatabase(outputfolder, outputcleanfilename, templatedbfilename);
 
 
     // 获取ewcfilename文件的大小，并记录在TempDbFileSize变量
@@ -2223,42 +2273,60 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
     if(!IsValidUTF8(ewcfilename.data()))
     {
         ewcfilename = AnsiToUTF8(ewcfilename.data());
+
+        outputfolder = AnsiToUTF8(outputfolder.data());
     }
 
+    std::wstring wfilename = string_to_wstring(ewcfilename);
+    std::wstring woutputfolder = string_to_wstring(outputfolder);
 
+    DWORD clustersize = 0;
+
+    if (!GetClusterSize(woutputfolder.c_str(), clustersize))
+    {
+        clustersize = 4 * 1024;
+    }
+    else
+    {
+        ctx.logger(1, "get page size : %d", clustersize);
+    }
 
     E5D::Studio::DataAccess da;
     da.E5dDbPath =  ewcfilename;
+    da.CreateIndex = false;
+    da.AutoCommitNum = 0;
+    da.WALMode = false;
+    da.PageSize = clustersize;// 32 * 1024;
     if (!da.OpenLocalDatabase())
     {
         ctx.logger(2, "打开ewc文件失败: %s", ewcfilename.c_str());
         return false;
     }
 
-    da.SetCacheSize(4000000);
+    //da.SetCacheSize(4000000);
 
-    da.SetWalAutoCheckpoint(500);
+    //da.SetWalAutoCheckpoint(500);
     //da.SetJournalSizeLimit(104857600);
 
-    da.SetMMapSize(0);
+    //da.SetMMapSize(0);
 
-    da.SetSynchronous(E5D::Studio::SQLiteSynchronousType::OFF);
+    //da.SetSynchronous(E5D::Studio::SQLiteSynchronousType::OFF);
 
 
 
-    if (!da.BeginForBatch())
-    {
-        ctx.logger(2, "开启ewc文件失败: %s", ewcfilename.c_str());
-        return false;
-    }
+    //if (!da.BeginForBatch())
+    //{
+    //    ctx.logger(2, "开启ewc文件失败: %s", ewcfilename.c_str());
+    //    return false;
+    //}
 
-    if (!da.DeleteIndexBeforeBatch())
-    {
-        ctx.logger(2, "准备批处理失败: %s", ewcfilename.c_str());
-        return false;
-    }
+    //if (!da.DeleteIndexBeforeBatch())
+    //{
+    //    ctx.logger(2, "准备批处理失败: %s", ewcfilename.c_str());
+    //    return false;
+    //}
 
-    da.AutoCommitNum = 0;
+    //da.AutoCommitNum = 0;
 
     std::string signcode = GenerateGuidString();
     std::string cacheguid = GenerateGuidString();
@@ -2534,13 +2602,22 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename)
 
 
     time0 = std::chrono::high_resolution_clock::now();
-    if(!da.ReIndexAfterBatch())
+
+    if (!da.CreateInitIndex())
     {
-        ctx.logger(2, "批处理恢复失败: %s", ewcfilename.c_str());
+        ctx.logger(2, "重建索引失败: %s", ewcfilename.c_str());
         return false;
     }
     e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
-    logger(0, "批处理恢复 in %lldms", e / 1000000);
+    logger(0, "重建索引 in %lldms", e / 1000000);
+
+    //if(!da.ReIndexAfterBatch())
+    //{
+    //    ctx.logger(2, "批处理恢复失败: %s", ewcfilename.c_str());
+    //    return false;
+    //}
+    //e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //logger(0, "批处理恢复 in %lldms", e / 1000000);
 
     if (!da.EndForBatch(true))
     {
