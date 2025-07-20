@@ -595,6 +595,8 @@ int main(int argc, char** argv)
 
   std::string pipename;
 
+  std::string outformat = "ewc";
+
   Store* store = new Store();
 
   for (int i = 1; i < argc; i++) {
@@ -623,6 +625,11 @@ int main(int argc, char** argv)
               if (key == "--guid")
               {
                   pipename = val;
+                  continue;
+              }
+              else if (key == "--outformat") {
+
+                  outformat = val;
                   continue;
               }
               else if (key == "--keep-groups") {
@@ -763,7 +770,7 @@ int main(int argc, char** argv)
   }
 
   auto time0 = std::chrono::high_resolution_clock::now();
-  if (exportEWC(store, logger, filename, delexistfile))
+  if (exportEWC(store, logger, filename, delexistfile, outformat))
   {
       long long e = std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
       logger(0, "Exported  in %lldms", e);

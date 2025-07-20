@@ -2134,7 +2134,7 @@ namespace ExportEWC{
 
 using namespace ExportEWC;
 
-bool exportEWC(Store* store, Logger logger, const std::string& filename,const bool& delexistfile)
+bool exportEWC(Store* store, Logger logger, const std::string& filename,const bool& delexistfile,const std::string & outformat)
 {
 
     //获取当前可执行文件目录下的 e5dstudio_template.db 文件绝对路径
@@ -2192,7 +2192,10 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
         ctx.centerModel ? 1 : 0,
         ctx.includeAttributes ? 1 : 0);
 
-    std::string ewcfilename = filename + ".ewc";
+
+    std::string ewcfilename = filename +
+        (outformat.starts_with(".") ? "" : ".") +
+        outformat;
 
     // 检查文件是否存在，如果存在则移动到回收站
     if (std::filesystem::exists(ewcfilename)) {
