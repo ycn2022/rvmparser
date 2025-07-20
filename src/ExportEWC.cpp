@@ -2263,6 +2263,7 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
     //获取ewcfilename的文件名（带扩展名）
     std::string outputcleanfilename = std::filesystem::path(ewcfilename).filename().string();
 
+    std::string cleanfilename = std::filesystem::path(filename).stem().string();
 
     //E5D::Studio::DataAccessUtil::EnsureDatabase(outputfolder, outputcleanfilename, templatedbfilename);
 
@@ -2279,7 +2280,11 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
         ewcfilename = AnsiToUTF8(ewcfilename.data());
 
         outputfolder = AnsiToUTF8(outputfolder.data());
+
+        cleanfilename = AnsiToUTF8(cleanfilename.data());
+
     }
+
 
     std::wstring wfilename = string_to_wstring(ewcfilename);
     std::wstring woutputfolder = string_to_wstring(outputfolder);
@@ -2339,6 +2344,8 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
     settings.insert(std::pair<std::string, std::string>("StoreGeometryInfo", "True"));
     settings.insert(std::pair<std::string, std::string>("SignatureCode", signcode));
     settings.insert(std::pair<std::string, std::string>("cacheguid", cacheguid));
+    settings.insert(std::pair<std::string, std::string>("name", cleanfilename));
+    settings.insert(std::pair<std::string, std::string>("context", cleanfilename));
     da.UpdateProjectSettings(settings);
 
     BBox3f worldBounds = createEmptyBBox3f();

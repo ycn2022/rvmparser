@@ -585,6 +585,8 @@ int main(int argc, char** argv)
 {
   int rv = 0;
 
+  auto time0 = std::chrono::high_resolution_clock::now();
+
   //直接删除，还是进回收站
   bool delexistfile = false;
 
@@ -769,7 +771,6 @@ int main(int argc, char** argv)
           e0);
   }
 
-  auto time0 = std::chrono::high_resolution_clock::now();
   if (exportEWC(store, logger, filename, delexistfile, outformat))
   {
       long long e = std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
