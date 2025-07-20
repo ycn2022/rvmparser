@@ -1540,9 +1540,10 @@ namespace ExportEWC{
       }
 
       //{
+      //    float scale = 1.f;
       //    //测试反序列化
       //    Geometry testgeo;
-      //    Store::deserializeGeometry(localgeometrystr, geosize, &testgeo);
+      //    Store::deserializeGeometry(localgeometrystr, geosize, &testgeo, scale);
       //    Store::DeleteFacetGroup(&testgeo);
       //}
 

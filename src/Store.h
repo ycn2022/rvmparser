@@ -278,11 +278,13 @@ public:
 
   Geometry* cloneGeometry(Node* parent, const Geometry* src);
 
+
   //binary生命周期 由Store管理，无需释放
   bool serializeGeometry(const Geometry* geo, char*& binary, size_t& geosize);
 
   //binary由调用者管理，Geometry*也由调用者释放
-  static bool deserializeGeometry(const char* buffer, const size_t& bufsize, Geometry* geo);
+  static bool deserializeGeometry(const char* buffer, const size_t& bufsize, Geometry* geo, float& scale);
+
 
   Node* getDefaultModel();
 
