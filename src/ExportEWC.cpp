@@ -1162,13 +1162,14 @@ namespace ExportEWC{
           memcpy(localgeometrystr+ pos, &geo->triangulation->vertices_n, sizeof(geo->triangulation->vertices_n));
           pos += sizeof(geo->triangulation->vertices_n);
 
+          memcpy(localgeometrystr + pos, &geo->triangulation->triangles_n, sizeof(geo->triangulation->triangles_n));
+          pos += sizeof(geo->triangulation->triangles_n);
+
           memcpy(localgeometrystr + pos, geo->triangulation->vertices, sizeof(float)* geo->triangulation->vertices_n * 3);
           pos += sizeof(float) * geo->triangulation->vertices_n * 3;
           memcpy(localgeometrystr + pos, geo->triangulation->normals, sizeof(float)* geo->triangulation->vertices_n * 3);
           pos += sizeof(float) * geo->triangulation->vertices_n * 3;
 
-          memcpy(localgeometrystr + pos, &geo->triangulation->triangles_n, sizeof(geo->triangulation->triangles_n));
-          pos += sizeof(geo->triangulation->triangles_n);
 
           memcpy(localgeometrystr + pos, geo->triangulation->indices, sizeof(uint32_t)* geo->triangulation->triangles_n * 3);
           pos += sizeof(uint32_t) * geo->triangulation->triangles_n * 3;
