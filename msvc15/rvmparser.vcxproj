@@ -186,8 +186,10 @@
     <ClCompile Include="..\src\ParserRVM.cpp" />
     <ClCompile Include="..\src\Store.cpp" />
     <ClCompile Include="..\src\StudioColorizer.cpp" />
+    <ClCompile Include="..\src\StudioMeshSerialize.cpp" />
     <ClCompile Include="..\src\Tessellator.cpp" />
     <ClCompile Include="..\src\TriangulationFactory.cpp" />
+    <ClCompile Include="..\src\TriangulationMeshSerialize.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\libs\libtess2\Include\tesselator.h" />
@@ -248,7 +250,9 @@
     <ClInclude Include="..\src\StoreVisitor.h" />
     <ClInclude Include="..\src\Store.h" />
     <ClInclude Include="..\src\StudioColorizer.h" />
+    <ClInclude Include="..\src\StudioMeshSerialize.h" />
     <ClInclude Include="..\src\Tessellator.h" />
+    <ClInclude Include="..\src\TriangulationMeshSerialize.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

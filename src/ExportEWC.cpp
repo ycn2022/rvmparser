@@ -25,6 +25,7 @@
 
 #include "DataAccess.h"
 #include <execution>
+#include "StudioMeshSerialize.h"
 
 #define NOMINMAX
 
@@ -35,6 +36,7 @@
 
 #include "windows.h"
 #include <future>
+#include "TriangulationMeshSerialize.h"
 
 #define NOTWRITEDB 0
 
@@ -220,6 +222,7 @@ namespace ExportEWC{
 
     std::vector<GeometryItem> geometries;
 
+    bool geometryasmesh = true;
 
     bool centerModel = true;
     bool rotateZToY = true;
@@ -1533,10 +1536,30 @@ namespace ExportEWC{
 
       char* localgeometrystr = nullptr;
 
-      if (!__store->serializeGeometry(geo, localgeometrystr, geosize))
+      if (ctx.geometryasmesh)
       {
-          ctx.logger(1, "serialize error,%s", instName);
-          return false;
+          if (!__store->serializeGeometry(geo, localgeometrystr, geosize))
+          {
+              ctx.logger(1, "serialize error,%s", instName);
+              return false;
+          }
+      }
+      else
+      {
+
+          TriangulationMeshSerialize meshSerial(geo->triangulation);
+          uint8* buffer;
+          int32 bufsize;
+          meshSerial.Serialize(buffer, bufsize);
+          if (bufsize > 0)
+          {
+              localgeometrystr = (char*)buffer;
+              geosize = bufsize;
+          }
+          else
+          {
+              ctx.logger(1, "serialize error,%s", instName);
+          }
       }
 
       //{
@@ -1593,6 +1616,13 @@ namespace ExportEWC{
       binstr = std::string(localgeometrystr, geosize);
       //Shape2Binary(shape, binstr);
 #endif
+
+
+      if (!ctx.geometryasmesh && localgeometrystr != nullptr)
+      {
+          delete[] localgeometrystr;
+          localgeometrystr = nullptr;
+      }
 
       //Store管理不用delete
       //if (localgeometrystr != nullptr)
@@ -2153,7 +2183,7 @@ namespace ExportEWC{
 
 using namespace ExportEWC;
 
-bool exportEWC(Store* store, Logger logger, const std::string& filename,const bool& delexistfile,const std::string & outformat)
+bool exportEWC(Store* store, Logger logger, const std::string& filename,const bool& delexistfile, const bool& geometryasmesh,const std::string & outformat)
 {
 
     //获取当前可执行文件目录下的 e5dstudio_template.db 文件绝对路径
@@ -2203,7 +2233,8 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
     //}
 
     Context ctx{
-      .logger = logger
+      .logger = logger,
+      .geometryasmesh = geometryasmesh
     };
 
     ctx.logger(0, "export: rotate-z-to-y=%u center=%u attributes=%u",
@@ -2360,7 +2391,10 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
     std::string cacheguid = GenerateGuidString();
 
     std::map<std::string, std::string> settings;
-    settings.insert(std::pair<std::string, std::string>("StoreGeometryInfo", "True"));
+    if(ctx.geometryasmesh)
+    {
+        settings.insert(std::pair<std::string, std::string>("StoreGeometryInfo", "True"));
+    }
     settings.insert(std::pair<std::string, std::string>("SignatureCode", signcode));
     settings.insert(std::pair<std::string, std::string>("cacheguid", cacheguid));
     settings.insert(std::pair<std::string, std::string>("name", cleanfilename));
