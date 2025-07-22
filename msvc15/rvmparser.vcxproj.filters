@@ -199,9 +199,6 @@
     <ClInclude Include="..\src\StudioColorizer.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\StudioMeshSerialize.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\TriangulationMeshSerialize.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -301,9 +298,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ExportEWC.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\StudioMeshSerialize.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\TriangulationMeshSerialize.cpp">
