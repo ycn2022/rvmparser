@@ -2391,10 +2391,10 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
     std::string cacheguid = GenerateGuidString();
 
     std::map<std::string, std::string> settings;
-    if(ctx.geometryasmesh)
-    {
-        settings.insert(std::pair<std::string, std::string>("StoreGeometryInfo", "True"));
-    }
+    //if(ctx.geometryasmesh)
+    //{
+    //    settings.insert(std::pair<std::string, std::string>("StoreGeometryInfo", "True"));
+    //}
     settings.insert(std::pair<std::string, std::string>("SignatureCode", signcode));
     settings.insert(std::pair<std::string, std::string>("cacheguid", cacheguid));
     settings.insert(std::pair<std::string, std::string>("name", cleanfilename));

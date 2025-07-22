@@ -172,24 +172,36 @@ Geometry* Store::cloneGeometry(Node* parent, const Geometry* src)
 
 bool Store::serializeGeometry(const Geometry* geo, char*& binary, size_t& geosize)
 {
+    //序列化时要注意 跨平台和编译环境的差异。
+    //比如 int -> 应使用 int32_t精确定义4字节整型
+    //4字节的存储，有大端和小端差异。一般网络传输用大端，本地存储用小端。小端的低位在前面，比如107，16进制 6B。小端存储：6B00 0000,大端存储0000 006B
+    /*结构体定义最好采用内存对齐 。但由于用到的所有结构体，全都是float 和int32_t，都是4字节，多有应该不需要特别指定对齐
+
+    struct Cylinder {
+    float radius;
+    float height;
+} __attribute__((packed));  // 禁用内存填充 
+    
+    */
+
     auto scale = getScale(geo->M_3x4);
 
-    //int TriangleCount = geo->triangulation ? geo->triangulation->triangles_n : -1;
+    //int32_t TriangleCount = geo->triangulation ? geo->triangulation->triangles_n : -1;
 
     //统一加上100
-    int rvmkind = (int)geo->kind + 100;
+    int32_t rvmkind = (int32_t)geo->kind + 100;
 
     switch (geo->kind) {
 
     case Geometry::Kind::Pyramid:
     {
-        geosize = sizeof(int) + sizeof(geo->pyramid) /*+ sizeof(TriangleCount)*/;
+        geosize = sizeof(int32_t) + sizeof(geo->pyramid) /*+ sizeof(TriangleCount)*/;
 
         ResizeGeometryBinaryReuse(geosize);
 
         size_t pos = 0;
-        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
-        pos += sizeof(int);
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int32_t));
+        pos += sizeof(int32_t);
         memcpy(geometryBinaryReuse + pos, &geo->pyramid, sizeof(geo->pyramid));
         //pos += sizeof(geo->pyramid);
         //memcpy(geometryBinaryReuse + pos, &TriangleCount, sizeof(TriangleCount));
@@ -201,13 +213,13 @@ bool Store::serializeGeometry(const Geometry* geo, char*& binary, size_t& geosiz
     case Geometry::Kind::Box:
     {
 
-        geosize = sizeof(int) + sizeof(Geometry::box) /*+ sizeof(TriangleCount)*/;
+        geosize = sizeof(int32_t) + sizeof(Geometry::box) /*+ sizeof(TriangleCount)*/;
 
         ResizeGeometryBinaryReuse(geosize);
 
         size_t pos = 0;
-        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
-        pos += sizeof(int);
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int32_t));
+        pos += sizeof(int32_t);
         memcpy(geometryBinaryReuse + pos, &geo->box, sizeof(Geometry::box));
         //pos += sizeof(Geometry::box);
         //memcpy(geometryBinaryReuse + pos, &TriangleCount, sizeof(TriangleCount));
@@ -217,14 +229,14 @@ bool Store::serializeGeometry(const Geometry* geo, char*& binary, size_t& geosiz
     case Geometry::Kind::RectangularTorus:
     {
 
-        geosize = sizeof(int) + sizeof(geo->rectangularTorus) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(geo->rectangularTorus) + sizeof(scale) +
             sizeof(geo->sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         ResizeGeometryBinaryReuse(geosize);
 
         size_t pos = 0;
-        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
-        pos += sizeof(int);
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int32_t));
+        pos += sizeof(int32_t);
         memcpy(geometryBinaryReuse + pos, &geo->rectangularTorus, sizeof(geo->rectangularTorus));
         pos += sizeof(geo->rectangularTorus);
         memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
@@ -240,15 +252,15 @@ bool Store::serializeGeometry(const Geometry* geo, char*& binary, size_t& geosiz
     case Geometry::Kind::Sphere:
     {
 
-        geosize = sizeof(int) + sizeof(geo->sphere) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(geo->sphere) + sizeof(scale) +
             sizeof(geo->sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         ResizeGeometryBinaryReuse(geosize);
 
 
         size_t pos = 0;
-        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
-        pos += sizeof(int);
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int32_t));
+        pos += sizeof(int32_t);
         memcpy(geometryBinaryReuse + pos, &geo->sphere, sizeof(geo->sphere));
         pos += sizeof(geo->sphere);
         memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
@@ -264,7 +276,7 @@ bool Store::serializeGeometry(const Geometry* geo, char*& binary, size_t& geosiz
         break;
     case Geometry::Kind::FacetGroup:
     {
-        geosize = sizeof(int) + sizeof(geo->facetGroup.polygons_n);
+        geosize = sizeof(int32_t) + sizeof(geo->facetGroup.polygons_n);
         for (size_t i = 0; i < geo->facetGroup.polygons_n; i++)
         {
             auto& polygon = geo->facetGroup.polygons[i];
@@ -284,8 +296,8 @@ bool Store::serializeGeometry(const Geometry* geo, char*& binary, size_t& geosiz
         ResizeGeometryBinaryReuse(geosize);
 
         size_t pos = 0;
-        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
-        pos += sizeof(int);
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int32_t));
+        pos += sizeof(int32_t);
         memcpy(geometryBinaryReuse + pos, &geo->facetGroup.polygons_n, sizeof(geo->facetGroup.polygons_n));
         pos += sizeof(geo->facetGroup.polygons_n);
 
@@ -327,15 +339,15 @@ bool Store::serializeGeometry(const Geometry* geo, char*& binary, size_t& geosiz
     case Geometry::Kind::Snout:
     {
 
-        geosize = sizeof(int) + sizeof(geo->snout) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(geo->snout) + sizeof(scale) +
             sizeof(geo->sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         ResizeGeometryBinaryReuse(geosize);
 
 
         size_t pos = 0;
-        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
-        pos += sizeof(int);
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int32_t));
+        pos += sizeof(int32_t);
         memcpy(geometryBinaryReuse + pos, &geo->snout, sizeof(geo->snout));
         pos += sizeof(geo->snout);
         memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
@@ -351,15 +363,15 @@ bool Store::serializeGeometry(const Geometry* geo, char*& binary, size_t& geosiz
     case Geometry::Kind::EllipticalDish:
     {
 
-        geosize = sizeof(int) + sizeof(geo->ellipticalDish) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(geo->ellipticalDish) + sizeof(scale) +
             sizeof(geo->sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         ResizeGeometryBinaryReuse(geosize);
 
 
         size_t pos = 0;
-        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
-        pos += sizeof(int);
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int32_t));
+        pos += sizeof(int32_t);
         memcpy(geometryBinaryReuse + pos, &geo->ellipticalDish, sizeof(geo->ellipticalDish));
         pos += sizeof(geo->ellipticalDish);
         memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
@@ -374,14 +386,14 @@ bool Store::serializeGeometry(const Geometry* geo, char*& binary, size_t& geosiz
     case Geometry::Kind::SphericalDish:
     {
 
-        geosize = sizeof(int) + sizeof(geo->sphericalDish) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(geo->sphericalDish) + sizeof(scale) +
             sizeof(geo->sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         ResizeGeometryBinaryReuse(geosize);
 
         size_t pos = 0;
-        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
-        pos += sizeof(int);
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int32_t));
+        pos += sizeof(int32_t);
         memcpy(geometryBinaryReuse + pos, &geo->sphericalDish, sizeof(geo->sphericalDish));
         pos += sizeof(geo->sphericalDish);
         memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
@@ -394,14 +406,14 @@ bool Store::serializeGeometry(const Geometry* geo, char*& binary, size_t& geosiz
     break;
     case Geometry::Kind::Cylinder:
     {
-        geosize = sizeof(int) + sizeof(geo->cylinder) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(geo->cylinder) + sizeof(scale) +
             sizeof(geo->sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         ResizeGeometryBinaryReuse(geosize);
 
         size_t pos = 0;
-        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
-        pos += sizeof(int);
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int32_t));
+        pos += sizeof(int32_t);
         memcpy(geometryBinaryReuse + pos, &geo->cylinder, sizeof(geo->cylinder));
         pos += sizeof(geo->cylinder);
         memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
@@ -415,14 +427,14 @@ bool Store::serializeGeometry(const Geometry* geo, char*& binary, size_t& geosiz
 
     case Geometry::Kind::CircularTorus:
     {
-        geosize = sizeof(int) + sizeof(geo->circularTorus) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(geo->circularTorus) + sizeof(scale) +
             sizeof(geo->sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         ResizeGeometryBinaryReuse(geosize);
 
         size_t pos = 0;
-        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int));
-        pos += sizeof(int);
+        memcpy(geometryBinaryReuse, &rvmkind, sizeof(int32_t));
+        pos += sizeof(int32_t);
         memcpy(geometryBinaryReuse + pos, &geo->circularTorus, sizeof(geo->circularTorus));
         pos += sizeof(geo->circularTorus);
         memcpy(geometryBinaryReuse + pos, &scale, sizeof(scale));
@@ -453,22 +465,22 @@ bool Store::deserializeGeometry(const char* buffer, const size_t& bufsize, Geome
 {
     Geometry::Kind geometrytype = Geometry::Kind::Line;
 
-    if (bufsize < sizeof(int))
+    if (bufsize < sizeof(int32_t))
         return false;
 
     size_t pos = 0;
 
-    int geosize = 0;
+    int32_t geosize = 0;
 
-    //int TriangleCount = 0;
+    //int32_t TriangleCount = 0;
 
     //float scale = 1.f;
 
     float sampleStartAngle = 0.f;
 
-    int rvmkind = 0;
+    int32_t rvmkind = 0;
 
-    memcpy(&rvmkind, buffer, sizeof(int));
+    memcpy(&rvmkind, buffer, sizeof(int32_t));
 
     //-100 还原
     rvmkind = rvmkind - 100;
@@ -488,7 +500,7 @@ bool Store::deserializeGeometry(const char* buffer, const size_t& bufsize, Geome
     {
     case Geometry::Kind::Box:
     {
-        geosize = sizeof(int) + sizeof(Geometry::box) /*+ sizeof(TriangleCount)*/;
+        geosize = sizeof(int32_t) + sizeof(Geometry::box) /*+ sizeof(TriangleCount)*/;
 
         if (geosize != bufsize)
             return false;
@@ -505,7 +517,7 @@ bool Store::deserializeGeometry(const char* buffer, const size_t& bufsize, Geome
     break;
     case Geometry::Kind::CircularTorus:
     {
-        geosize = sizeof(int) + sizeof(Geometry::circularTorus) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(Geometry::circularTorus) + sizeof(scale) +
             sizeof(sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         if (geosize != bufsize)
@@ -527,7 +539,7 @@ bool Store::deserializeGeometry(const char* buffer, const size_t& bufsize, Geome
     break;
     case Geometry::Kind::Cylinder:
     {
-        geosize = sizeof(int) + sizeof(Geometry::cylinder) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(Geometry::cylinder) + sizeof(scale) +
             sizeof(sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         if (geosize != bufsize)
@@ -549,7 +561,7 @@ bool Store::deserializeGeometry(const char* buffer, const size_t& bufsize, Geome
     break;
     case Geometry::Kind::EllipticalDish:
     {
-        geosize = sizeof(int) + sizeof(Geometry::ellipticalDish) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(Geometry::ellipticalDish) + sizeof(scale) +
             sizeof(sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         if (geosize != bufsize)
@@ -570,7 +582,7 @@ bool Store::deserializeGeometry(const char* buffer, const size_t& bufsize, Geome
     break;
     case Geometry::Kind::FacetGroup:
     {
-        geosize = sizeof(int) + sizeof(uint32_t);
+        geosize = sizeof(int32_t) + sizeof(uint32_t);
 
         if (bufsize < geosize)
             return false;
@@ -661,7 +673,7 @@ bool Store::deserializeGeometry(const char* buffer, const size_t& bufsize, Geome
     break;
     case Geometry::Kind::Pyramid:
     {
-        geosize = sizeof(int) + sizeof(Geometry::pyramid) /*+ sizeof(TriangleCount)*/;
+        geosize = sizeof(int32_t) + sizeof(Geometry::pyramid) /*+ sizeof(TriangleCount)*/;
 
         if (geosize != bufsize)
             return false;
@@ -677,7 +689,7 @@ bool Store::deserializeGeometry(const char* buffer, const size_t& bufsize, Geome
     break;
     case Geometry::Kind::RectangularTorus:
     {
-        geosize = sizeof(int) + sizeof(Geometry::rectangularTorus) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(Geometry::rectangularTorus) + sizeof(scale) +
             sizeof(sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         if (geosize != bufsize)
@@ -698,7 +710,7 @@ bool Store::deserializeGeometry(const char* buffer, const size_t& bufsize, Geome
     break;
     case Geometry::Kind::Snout:
     {
-        geosize = sizeof(int) + sizeof(Geometry::snout) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(Geometry::snout) + sizeof(scale) +
             sizeof(sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         if (geosize != bufsize)
@@ -719,7 +731,7 @@ bool Store::deserializeGeometry(const char* buffer, const size_t& bufsize, Geome
     break;
     case Geometry::Kind::SphericalDish:
     {
-        geosize = sizeof(int) + sizeof(Geometry::sphericalDish) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(Geometry::sphericalDish) + sizeof(scale) +
             sizeof(sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         if (geosize != bufsize)
@@ -740,7 +752,7 @@ bool Store::deserializeGeometry(const char* buffer, const size_t& bufsize, Geome
     break;
     case Geometry::Kind::Sphere:
     {
-        geosize = sizeof(int) + sizeof(Geometry::sphere) + sizeof(scale) +
+        geosize = sizeof(int32_t) + sizeof(Geometry::sphere) + sizeof(scale) +
             sizeof(sampleStartAngle) /*+ sizeof(TriangleCount)*/;
 
         if (geosize != bufsize)
