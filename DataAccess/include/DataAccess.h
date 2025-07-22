@@ -1,12 +1,13 @@
 #pragma once
 
+#include "platform_config.h"
 #include <string>
 #include <vector>
 #include <memory>
 #include <map>
 #include <variant>
 #include <cstdint>
-#include <atomic>>
+#include <atomic>
 
 // Forward declaration
 struct sqlite3;
