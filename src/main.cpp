@@ -593,6 +593,8 @@ int main(int argc, char** argv)
   //保存geometry,而不是mesh
   bool geometryasmesh = true;
 
+  bool compresszip = false;
+
   bool should_colorize = true;
   std::string color_attribute;
 
@@ -625,6 +627,11 @@ int main(int argc, char** argv)
           else if (arg == "--savemesh") {
 
               geometryasmesh = false;
+              continue;
+          }
+          else if (arg == "--zip") {
+
+              compresszip = true;
               continue;
           }
 
@@ -779,7 +786,7 @@ int main(int argc, char** argv)
           e0);
   }
 
-  if (exportEWC(store, logger, filename, delexistfile, geometryasmesh, outformat))
+  if (exportEWC(store, logger, filename, delexistfile, geometryasmesh, compresszip, outformat))
   {
       long long e = std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
       logger(0, "Exported  in %lldms", e);

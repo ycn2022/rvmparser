@@ -37,6 +37,8 @@
 #include "windows.h"
 #include <future>
 #include "TriangulationMeshSerialize.h"
+#include "CompressionUtils.h"
+using namespace E5D::Compression;
 
 #define NOTWRITEDB 0
 
@@ -400,6 +402,7 @@ namespace ExportEWC{
           return false;
       }
   }
+
 
   //uint32_t addDataItem(Context& /*ctx*/, Model& model, const void* ptr, size_t size, bool copy)
   //{
@@ -2183,7 +2186,8 @@ namespace ExportEWC{
 
 using namespace ExportEWC;
 
-bool exportEWC(Store* store, Logger logger, const std::string& filename,const bool& delexistfile, const bool& geometryasmesh,const std::string & outformat)
+bool exportEWC(Store* store, Logger logger, const std::string& filename,const bool& delexistfile, 
+    const bool& geometryasmesh,const bool& compresszip,const std::string & outformat)
 {
 
     //获取当前可执行文件目录下的 e5dstudio_template.db 文件绝对路径
@@ -2713,6 +2717,13 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
             ctx.logger(1, "文件大小已变化，保留文件: %s (初始: %zu bytes, 当前: %zu bytes)", 
                 ewcfilename.c_str(), static_cast<size_t>(TempDbFileSize), static_cast<size_t>(currentFileSize));
         }
+    }
+
+    if (compresszip)
+    {
+        std::string outputzipfile = ewcfilename + ".ewz";
+        SevenZipCompressor zip7;
+        zip7.CompressFile(ewcfilename, outputzipfile);
     }
 
     return true;
