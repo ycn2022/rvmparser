@@ -37,8 +37,9 @@
 #include "windows.h"
 #include <future>
 #include "TriangulationMeshSerialize.h"
-#include "CompressionUtils.h"
-using namespace E5D::Compression;
+
+#include "E5DZipUtils.h"
+using namespace E5DZipUtils;
 
 #define NOTWRITEDB 0
 
@@ -141,6 +142,9 @@ namespace ExportEWC{
 
     const float pi = float(M_PI);
     const float half_pi = float(0.5 * M_PI);
+    const float one_over_pi = float(1.0 / M_PI);
+    const float twopi = float(2.0 * M_PI);
+
 
   struct DataItem
   {
@@ -889,8 +893,8 @@ namespace ExportEWC{
       if (geo->kind == Geometry::Kind::Line)
           return false;
 
-      if (geo->triangulation == nullptr)
-          return false;
+      //if (geo->triangulation == nullptr)
+      //    return false;
 
       int TriangleCount = 0;
 
@@ -909,7 +913,7 @@ namespace ExportEWC{
       int geometrytype = 0;
 
 
-      TriangleCount = geo->triangulation->triangles_n;
+      //TriangleCount = geo->triangulation->triangles_n;
 
 #if !NOTPARSESHAPE
 
@@ -965,6 +969,8 @@ namespace ExportEWC{
 
           //TriangleCount = geo->triangulation->triangles_n;
 
+          TriangleCount = 12;
+
           //shape = subshape;
 
           geoname = "Pyramid " + std::to_string(GeoIndex) + " of ";
@@ -1015,6 +1021,8 @@ namespace ExportEWC{
           ////TriangleCount = 12;
 
           ////shape = subshape;
+
+          TriangleCount = 12;
 
           geoname = "Box " + std::to_string(GeoIndex) + " of ";
 
@@ -1071,6 +1079,8 @@ namespace ExportEWC{
 
           ////shape = subshape;
 
+          TriangleCount = 24;
+
           geoname = "RectangularTorus " + std::to_string(GeoIndex) + " of ";
 
       }
@@ -1120,6 +1130,8 @@ namespace ExportEWC{
           //TriangleCount = geo->triangulation->triangles_n;
 
           ////shape = subshape;
+
+          TriangleCount = factory->sagittaBasedSegmentCount(twopi, geo->sphere.diameter / 2, scale) * 5;
 
           geoname = "Sphere " + std::to_string(GeoIndex) + " of ";
 
@@ -1232,6 +1244,26 @@ namespace ExportEWC{
 
           ////shape = subshape;
 
+          TriangleCount = 0;
+          for (size_t i = 0; i < geo->facetGroup.polygons_n; i++)
+          {
+              auto& polygon = geo->facetGroup.polygons[i];
+              if (polygon.contours_n == 1)
+              {
+                  if (polygon.contours[0].vertices_n == 3)
+                      TriangleCount += 1;
+                  else if (polygon.contours[0].vertices_n == 4)
+                      TriangleCount += 2;
+              }
+              else
+              {
+                  for (size_t j = 0; j < polygon.contours_n; j++)
+                  {
+                      TriangleCount += polygon.contours[j].vertices_n / 3;
+                  }
+              }
+          }
+
           geoname = "FacetGroup " + std::to_string(GeoIndex) + " of ";
 
       }
@@ -1297,7 +1329,10 @@ namespace ExportEWC{
 
           //TriangleCount = geo->triangulation->triangles_n;
 
-          ////shape = subshape;
+          ////shape = subshape
+
+          auto radius_max = std::max(geo->snout.radius_b, geo->snout.radius_t);
+          TriangleCount = factory->sagittaBasedSegmentCount(twopi, radius_max, scale) * 3;
 
           geoname = "Snout " + std::to_string(GeoIndex) + " of ";
 
@@ -1353,6 +1388,8 @@ namespace ExportEWC{
           //TriangleCount = geo->triangulation->triangles_n;
 
           ////shape = subshape;
+
+          TriangleCount = factory->sagittaBasedSegmentCount(twopi, geo->ellipticalDish.baseRadius, scale) * 3;
 
           geoname = "EllipticalDish " + std::to_string(GeoIndex) + " of ";
 
@@ -1414,6 +1451,8 @@ namespace ExportEWC{
 
           ////shape = subshape;
 
+          TriangleCount = factory->sagittaBasedSegmentCount(twopi, geo->sphericalDish.baseRadius, scale) * 3;
+
           geoname = "SphericalDish " + std::to_string(GeoIndex) + " of ";
 
       }
@@ -1466,6 +1505,8 @@ namespace ExportEWC{
           //TriangleCount = geo->triangulation->triangles_n;
 
           ////shape = subshape;
+
+          TriangleCount = factory->sagittaBasedSegmentCount(twopi, geo->cylinder.radius, scale) * 3;
 
           geoname = "Cylinder " + std::to_string(GeoIndex) + " of ";
 
@@ -1521,6 +1562,9 @@ namespace ExportEWC{
           //TriangleCount = geo->triangulation->triangles_n;
 
           ////shape = subshape;
+
+          TriangleCount = factory->sagittaBasedSegmentCount(twopi, geo->circularTorus.radius, scale) *
+              factory->sagittaBasedSegmentCount(twopi, geo->circularTorus.offset, scale);
 
           geoname = "CircularTorus " + std::to_string(GeoIndex) + " of ";
 
@@ -2190,6 +2234,53 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
     const bool& geometryasmesh,const bool& compresszip,const std::string & outformat)
 {
 
+    //{
+    //    SevenZipCompressor zip7;
+    //    {
+    //        auto time0 = std::chrono::high_resolution_clock::now();
+    //        zip7.CompressDirectory("F:/03 批注信息", "F:\\xxx9.7z", 9);
+    //        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //        logger(0, "zip 9  in %lldms", e / 1000000);
+    //    }
+    //    {
+    //        auto time0 = std::chrono::high_resolution_clock::now();
+    //        zip7.CompressDirectory("F:/03 批注信息", "F:\\xxx9.7z", 5);
+    //        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //        logger(0, "zip 5  in %lldms", e / 1000000);
+    //    }
+    //    {
+    //        auto time0 = std::chrono::high_resolution_clock::now();
+    //        zip7.CompressDirectory("F:/03 批注信息", "F:\\xxx9.7z", 1);
+    //        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //        logger(0, "zip 1  in %lldms", e / 1000000);
+    //    }
+    //    std::vector<std::string> files;
+    //    files.push_back("F:\\spooler.rvm.ewd.ewz");
+    //    files.push_back("F:/03 批注信息/批注4-画箭头.png");
+    //    files.push_back("F:/03 批注信息/批注3-画文本.json");
+    //    files.push_back("F:/03 批注信息/批注4-画箭头.png");
+    //    {
+    //        auto time0 = std::chrono::high_resolution_clock::now();
+    //        zip7.CompressFiles(files, "F:/yyy9.7z", 9);
+    //        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //        logger(0, "zip 9  in %lldms", e / 1000000);
+    //    }
+    //    {
+    //        auto time0 = std::chrono::high_resolution_clock::now();
+    //        zip7.CompressFiles(files, "F:/yyy1.7z", 5);
+    //        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //        logger(0, "zip 5  in %lldms", e / 1000000);
+    //    }
+    //    {
+    //        auto time0 = std::chrono::high_resolution_clock::now();
+    //        zip7.CompressFiles(files, "F:/yyy0.7z", 1);
+    //        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //        logger(0, "zip 1  in %lldms", e / 1000000);
+    //    }
+    //}
+
+
+
     //获取当前可执行文件目录下的 e5dstudio_template.db 文件绝对路径
     std::string templatedbfilename;
     {
@@ -2721,10 +2812,145 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
 
     if (compresszip)
     {
+        auto time0 = std::chrono::high_resolution_clock::now();
         std::string outputzipfile = ewcfilename + ".ewz";
-        SevenZipCompressor zip7;
-        zip7.CompressFile(ewcfilename, outputzipfile);
+
+        // 创建压缩工具实例
+        ZipUtils zipUtils;
+
+        //// 设置压缩选项
+        //CompressionOptions options;
+        //options.level = CompressionLevel::NORMAL;
+        //options.threadCount = 0; // 自动检测线程数
+
+        auto progressCallback = [](const std::string& filename, size_t processed, size_t total) {
+            double percentage = (double)processed / total * 100.0;
+            std::cout << "处理: " << filename << " (" << percentage << "%)" << std::endl;
+            };
+
+        //std::vector<std::string> files = { ewcfilename };
+        bool success = zipUtils.compressSingleFile(ewcfilename, outputzipfile, CompressionLevel::FASTEST, progressCallback);
+
+        //ZipUtils ziputils;
+        //ziputils.compressFile(ewcfilename, outputzipfile, 5);
+        //SevenZipCompressor zip7;
+        //zip7.CompressFile(ewcfilename, outputzipfile);
+        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+        logger(0, "ewz zip  in %lldms , success:%d", e / 1000000, success ? 1 : 0);
     }
+
+    //{
+
+    //    // 创建压缩工具实例
+    //    ZipUtils zipUtils;
+
+    //    //// 设置压缩选项
+    //    //CompressionOptions options;
+    //    //options.level = CompressionLevel::FASTEST;
+    //    //options.threadCount = 0; // 自动检测线程数
+
+
+
+    //    //{
+    //    //    auto time0 = std::chrono::high_resolution_clock::now();
+    //    //    ziputils.compressFolder("F:/03 批注信息", "F:\\xxx9.zst",9);
+    //    //    long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //    //    logger(0, "zip 9  in %lldms", e / 1000000);
+    //    //}
+    //    //{
+    //    //    options.level = CompressionLevel::NORMAL;
+    //    //    auto time0 = std::chrono::high_resolution_clock::now();
+    //    //    zipUtils.compressFolder("F:/03 批注信息", "F:/xxx3.zst", options);
+    //    //    long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //    //    logger(0, "zip 5  in %lldms", e / 1000000);
+    //    //}
+    //    //{
+    //    //    auto progressCallback = [](const std::string& filename, size_t processed, size_t total) {
+    //    //        double percentage = (double)processed / total * 100.0;
+    //    //        std::cout << "处理: " << filename << " (" << percentage << "%)" << std::endl;
+    //    //        };
+    //    //    options.level = CompressionLevel::FASTEST;
+    //    //    auto time0 = std::chrono::high_resolution_clock::now();
+    //    //    zipUtils.compressFolder("F:/03 批注信息", "F:/xxx1.zst", options, progressCallback);
+    //    //    long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //    //    logger(0, "zip 1  in %lldms", e / 1000000);
+    //    //}
+    //    std::vector<std::string> files;
+    //    files.push_back("F:/03 批注信息/批注4-画箭头.json");
+    //    files.push_back("F:/KLCEP.RVM");
+    //    //{
+    //    //    options.level = CompressionLevel::GOOD;
+    //    //    auto time0 = std::chrono::high_resolution_clock::now();
+    //    //    zipUtils.compressFiles(files, "F:\\yyy9.zst", options);
+    //    //    long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //    //    logger(0, "zip 9  in %lldms", e / 1000000);
+    //    //}
+    //    //{
+    //    //    options.level = CompressionLevel::NORMAL;
+    //    //    auto time0 = std::chrono::high_resolution_clock::now();
+    //    //    zipUtils.compressFiles(files, "F:\\yyy5.zst", options);
+    //    //    long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //    //    logger(0, "zip 5  in %lldms", e / 1000000);
+    //    //}
+    //    {
+    //        auto progressCallback = [](const std::string& filename, size_t processed, size_t total) {
+    //            double percentage = (double)processed / total * 100.0;
+    //            std::cout << "处理: " << filename << " (" << percentage << "%)" << std::endl;
+    //            };
+    //        //options.level = CompressionLevel::FASTEST;
+    //        auto time0 = std::chrono::high_resolution_clock::now();
+    //        zipUtils.compressSingleFile(files[0], files[0] + ".zst", CompressionLevel::FASTEST, progressCallback);
+    //        zipUtils.compressSingleFile(files[1], files[1] + ".zst", CompressionLevel::FASTEST, progressCallback);
+    //        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //        logger(0, "zip 1  in %lldms", e / 1000000);
+    //    }
+    //}
+
+
+    //{
+    //    ZipUtils ziputils;
+    //    //{
+    //    //    auto time0 = std::chrono::high_resolution_clock::now();
+    //    //    ziputils.compressFolder("F:/03 批注信息", "F:\\xxx9.zst",9);
+    //    //    long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //    //    logger(0, "zip 9  in %lldms", e / 1000000);
+    //    //}
+    //    {
+    //        auto time0 = std::chrono::high_resolution_clock::now();
+    //        ziputils.compressFolder("F:/03 批注信息", "F:\\xxx3.zst", 3);
+    //        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //        logger(0, "zip 5  in %lldms", e / 1000000);
+    //    }
+    //    {
+    //        auto time0 = std::chrono::high_resolution_clock::now();
+    //        ziputils.compressFolder("F:/03 批注信息", "F:\\xxx1.zst", 1);
+    //        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //        logger(0, "zip 1  in %lldms", e / 1000000);
+    //    }
+    //    std::vector<std::string> files;
+    //    files.push_back("F:\\spooler.rvm.ewd.ewz");
+    //    files.push_back("F:/03 批注信息/批注4-画箭头.png");
+    //    files.push_back("F:/03 批注信息/批注3-画文本.json");
+    //    files.push_back("F:/03 批注信息/批注4-画箭头.png");
+    //    {
+    //        auto time0 = std::chrono::high_resolution_clock::now();
+    //        ziputils.compressFiles(files, "F:/yyy9.zst", 9);
+    //        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //        logger(0, "zip 9  in %lldms", e / 1000000);
+    //    }
+    //    {
+    //        auto time0 = std::chrono::high_resolution_clock::now();
+    //        ziputils.compressFiles(files, "F:/yyy5.zst", 5);
+    //        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //        logger(0, "zip 5  in %lldms", e / 1000000);
+    //    }
+    //    {
+    //        auto time0 = std::chrono::high_resolution_clock::now();
+    //        ziputils.compressFiles(files, "F:/yyy1.zst", 1);
+    //        long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
+    //        logger(0, "zip 1  in %lldms", e / 1000000);
+    //    }
+    //}
 
     return true;
 }

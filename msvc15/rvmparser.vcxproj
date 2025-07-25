@@ -104,15 +104,15 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\01Work\Github\ycn2022\rvmparser\ThirdParty\E5DZipLib\include;D:\01Work\Github\ycn2022\rvmparser\ThirdParty\DataAccess\include;$(ProjectDir)..\libs\libtess2\include;$(ProjectDir)..\libs\rapidjson\include;D:\01Work\e5d-studio\studio-unreal\Refs\cereal-UE4\include\cereal\include;D:\01Work\e5d-studio\studio-unreal\Refs\e5d_Shape\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\01Work\Github\ycn2022\rvmparser\ThirdParty\DataAccess\include;$(ProjectDir)..\libs\libtess2\include;$(ProjectDir)..\libs\rapidjson\include;D:\01Work\e5d-studio\studio-unreal\Refs\cereal-UE4\include\cereal\include;D:\01Work\e5d-studio\studio-unreal\Refs\e5d_Shape\include;$(ProjectDir)..\ThirdParty\E5DZipUtils\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\ThirdParty\7zip\lib\;$(SolutionDir)..\ThirdParty\E5DZipLib\lib\$(Configuration);$(SolutionDir)..\ThirdParty\DataAccess\lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>E5DDataAccessLib.lib;E5DZipLib.lib;7zip_c.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\ThirdParty\E5DZipLib\lib\$(Configuration);$(SolutionDir)..\ThirdParty\DataAccess\lib\$(Configuration);$(ProjectDir)..\ThirdParty\E5DZipUtils\lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>E5DDataAccessLib.lib;E5DZipUtils.lib;zstd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -143,7 +143,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>FOONDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\01Work\Github\ycn2022\rvmparser\ThirdParty\E5DZipLib\include;D:\01Work\Github\ycn2022\rvmparser\ThirdParty\DataAccess\include;$(ProjectDir)..\libs\libtess2\include;$(ProjectDir)..\libs\rapidjson\include;D:\01Work\e5d-studio\studio-unreal\Refs\cereal-UE4\include\cereal\include;D:\01Work\e5d-studio\studio-unreal\Refs\e5d_Shape\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\01Work\Github\ycn2022\rvmparser\ThirdParty\DataAccess\include;$(ProjectDir)..\libs\libtess2\include;$(ProjectDir)..\libs\rapidjson\include;D:\01Work\e5d-studio\studio-unreal\Refs\cereal-UE4\include\cereal\include;D:\01Work\e5d-studio\studio-unreal\Refs\e5d_Shape\include;$(ProjectDir)..\ThirdParty\E5DZipUtils\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -151,8 +151,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\ThirdParty\7zip\lib\;$(SolutionDir)..\ThirdParty\E5DZipLib\lib\$(Configuration);$(SolutionDir)..\ThirdParty\DataAccess\lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>E5DDataAccessLib.lib;E5DZipLib.lib;7zip_c.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\ThirdParty\E5DZipLib\lib\$(Configuration);$(SolutionDir)..\ThirdParty\DataAccess\lib\$(Configuration);$(ProjectDir)..\ThirdParty\E5DZipUtils\lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>E5DDataAccessLib.lib;E5DZipUtils.lib;zstd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
