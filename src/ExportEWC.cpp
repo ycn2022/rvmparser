@@ -41,6 +41,8 @@
 #include "E5DZipUtils.h"
 using namespace E5DZipUtils;
 
+#include <iostream>
+
 #define NOTWRITEDB 0
 
 #define NOTPARSESHAPE 0
@@ -407,6 +409,38 @@ namespace ExportEWC{
       }
   }
 
+  int execute(const char* cmd) {
+
+      //// 命令字符串，替换为实际 EXE 路径和参数
+      //const char* command = "\"C:\\Path\\To\\YourExe.exe\" param1 param2";
+
+      // 打开管道，"r" 表示读取标准输出
+      std::unique_ptr<FILE, decltype(&_pclose)> pipe(_popen(cmd, "r"), _pclose);
+      if (!pipe) {
+          std::cerr << "Failed to open pipe" << std::endl;
+          return 1;
+      }
+
+      // 读取输出
+      std::string output;
+      char buffer[128];
+      while (fgets(buffer, sizeof(buffer), pipe.get()) != nullptr) {
+          output += buffer;
+      }
+
+      // 获取命令的退出码
+      int returnCode = _pclose(pipe.get());
+      if (returnCode == -1) {
+          std::cerr << "Failed to close pipe or command failed" << std::endl;
+          return 1;
+      }
+
+      // 输出结果
+      std::cout << "Command output:\n" << output << std::endl;
+      std::cout << "Return code: " << returnCode << std::endl;
+
+      return returnCode;
+  }
 
   //uint32_t addDataItem(Context& /*ctx*/, Model& model, const void* ptr, size_t size, bool copy)
   //{
@@ -2815,21 +2849,25 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
         auto time0 = std::chrono::high_resolution_clock::now();
         std::string outputzipfile = ewcfilename + ".ewz";
 
-        // 创建压缩工具实例
-        ZipUtils zipUtils;
+        std::string cmd = "zstd  -f -v -T0 --adapt --exclude-compressed --progress \"" + ewcfilename + "\" -o \"" + outputzipfile + "\"";
 
-        //// 设置压缩选项
-        //CompressionOptions options;
-        //options.level = CompressionLevel::NORMAL;
-        //options.threadCount = 0; // 自动检测线程数
+        int success = execute(cmd.c_str()) == 0;
 
-        auto progressCallback = [](const std::string& filename, size_t processed, size_t total) {
-            double percentage = (double)processed / total * 100.0;
-            std::cout << "处理: " << filename << " (" << percentage << "%)" << std::endl;
-            };
+        //// 创建压缩工具实例
+        //ZipUtils zipUtils;
 
-        //std::vector<std::string> files = { ewcfilename };
-        bool success = zipUtils.compressSingleFile(ewcfilename, outputzipfile, CompressionLevel::FASTEST, progressCallback);
+        ////// 设置压缩选项
+        ////CompressionOptions options;
+        ////options.level = CompressionLevel::NORMAL;
+        ////options.threadCount = 0; // 自动检测线程数
+
+        //auto progressCallback = [](const std::string& filename, size_t processed, size_t total) {
+        //    double percentage = (double)processed / total * 100.0;
+        //    std::cout << "处理: " << filename << " (" << percentage << "%)" << std::endl;
+        //    };
+
+        ////std::vector<std::string> files = { ewcfilename };
+        //bool success = zipUtils.compressSingleFile(ewcfilename, outputzipfile, CompressionLevel::FASTEST, progressCallback);
 
         //ZipUtils ziputils;
         //ziputils.compressFile(ewcfilename, outputzipfile, 5);
