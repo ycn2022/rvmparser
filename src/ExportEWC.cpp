@@ -2875,6 +2875,18 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
         //zip7.CompressFile(ewcfilename, outputzipfile);
         long long e = std::chrono::duration_cast<std::chrono::nanoseconds>((std::chrono::high_resolution_clock::now() - time0)).count();
         logger(0, "ewz zip  in %lldms , success:%d", e / 1000000, success ? 1 : 0);
+
+        if (success)
+        {
+            if (remove(ewcfilename.c_str()) == 0) {
+                // 删除成功
+            }
+            else {
+                // 删除失败，可调用ShowError处理错误
+                logger(0, "origin result file delete failed, please delete it : %s", ewcfilename.c_str());
+            }
+        }
+
     }
 
     //{
