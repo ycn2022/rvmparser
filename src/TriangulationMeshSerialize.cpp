@@ -36,7 +36,7 @@ int32 TriangulationMeshSerialize::VertexUVCount()
 
 void TriangulationMeshSerialize::GetVertex(int32 index, double& x, double& y, double& z)
 {
-	if (index < triangle->vertices_n);
+	if (index < triangle->vertices_n)
 	{
 		x = triangle->vertices[3 * index];
 		y = triangle->vertices[3 * index + 1];
@@ -46,7 +46,7 @@ void TriangulationMeshSerialize::GetVertex(int32 index, double& x, double& y, do
 
 void TriangulationMeshSerialize::GetVertexNormal(int32 index, float& x, float& y, float& z)
 {
-	if (index < triangle->vertices_n);
+	if (index < triangle->vertices_n)
 	{
 		x = triangle->normals[3 * index];
 		y = triangle->normals[3 * index + 1];
