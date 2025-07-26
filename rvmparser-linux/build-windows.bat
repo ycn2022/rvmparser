@@ -35,14 +35,14 @@ echo Executable location: build-windows\Release\rvmparser.exe
 
 REM Copy required DLL files
 echo Copying required DLL files...
-if exist ThirdParty\E5DZipUtils\bin\Release\E5DZipUtils.dll (
-    copy ThirdParty\E5DZipUtils\bin\Release\E5DZipUtils.dll build-windows\Release\ >nul
-    echo Copied E5DZipUtils.dll
-)
-if exist ThirdParty\E5DZipUtils\bin\Release\zstd.dll (
-    copy ThirdParty\E5DZipUtils\bin\Release\zstd.dll build-windows\Release\ >nul
-    echo Copied zstd.dll
-)
+REM if exist ThirdParty\E5DZipUtils\bin\Release\E5DZipUtils.dll (
+REM     copy ThirdParty\E5DZipUtils\bin\Release\E5DZipUtils.dll build-windows\Release\ >nul
+REM     echo Copied E5DZipUtils.dll
+REM )
+REM if exist ThirdParty\E5DZipUtils\bin\Release\zstd.dll (
+REM     copy ThirdParty\E5DZipUtils\bin\Release\zstd.dll build-windows\Release\ >nul
+REM     echo Copied zstd.dll
+REM )
 
 robocopy ThirdParty\copies\ build-windows\Release\ /E
 
