@@ -613,7 +613,7 @@ namespace ExportEWC{
 
 #if !NOTWRITEDB
 
-      if (!da.AddModel(utf8name, nodeId,
+      if (!da.AddModelAndBoundBox(utf8name, nodeId,
           node->bboxWorld.min.x,
           node->bboxWorld.min.y,
           node->bboxWorld.min.z,
@@ -710,7 +710,7 @@ namespace ExportEWC{
 
       {
           auto time01 = std::chrono::high_resolution_clock::now();
-          if (!da.AddInstance(nodeId, E5D::Studio::DataAccess::ComponentClassId, utf8name, nullptr, isSignificant,
+          if (!da.AddInstanceAndBoundBox(nodeId, E5D::Studio::DataAccess::ComponentClassId, utf8name, nullptr, isSignificant,
               bboxWorld.min.x,
               bboxWorld.min.y,
               bboxWorld.min.z,
@@ -1813,7 +1813,7 @@ namespace ExportEWC{
 
           {
               auto time01 = std::chrono::high_resolution_clock::now();
-              if (!da.AddInstance(shapeInstId, E5D::Studio::DataAccess::ShapeClassId, utf8name, nullptr, false,
+              if (!da.AddInstanceAndBoundBox(shapeInstId, E5D::Studio::DataAccess::ShapeClassId, utf8name, nullptr, false,
                   geo->bboxWorld.min.x,
                   geo->bboxWorld.min.y,
                   geo->bboxWorld.min.z,
@@ -2485,11 +2485,16 @@ bool exportEWC(Store* store, Logger logger, const std::string& filename,const bo
     da.AutoCommitNum = 0;
     da.WALMode = false;
     da.PageSize = clustersize;// 32 * 1024;
+
+    //ctx.logger(1, "OpenLocalDatabase");
+
     if (!da.OpenLocalDatabase())
     {
         ctx.logger(2, "打开ewc文件失败: %s", ewcfilename.c_str());
         return false;
     }
+
+    //ctx.logger(1, "OpenLocalDatabase success");
 
     //da.SetCacheSize(4000000);
 

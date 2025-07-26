@@ -104,17 +104,17 @@ namespace Studio {
         // 数据操作方法
         bool GetMaxId(const std::string& tabname, int64_t& maxid);
         bool AddInstance(const int64_t& id, const int64_t& classid, const std::string& name, const char* path, const bool& isSignificant);
-        bool AddInstance(const int64_t& id, const int64_t& classid, const std::string& name, const char* path, const bool& isSignificant,
+        bool AddInstanceAndBoundBox(const int64_t& id, const int64_t& classid, const std::string& name, const char* path, const bool& isSignificant,
             const double& min_x, const double& min_y, const double& min_z, const double& max_x, const double& max_y, const double& max_z);
         bool AddMaterial(const int64_t& id, const std::string& textureFolder, const BaseMaterial& material);
         bool AddModel(const std::string& modelName, const int64_t& id);
-        bool AddModel(const std::string& modelName, const int64_t& id, 
+        bool AddModelAndBoundBox(const std::string& modelName, const int64_t& id,
             const double& min_x, const double& min_y, const double& min_z, const double& max_x, const double& max_y, const double& max_z);
         bool AddAssoType(const std::string& name, const std::string& desc, const std::string& source_role, const std::string& target_role, const int& id);
         bool AddAsso(const int64_t& parentId, const int64_t& id, const int64_t& assoType);
         bool AddShape(const int64_t& id, const int64_t& instid, const int64_t& geo_id, const int& material_id, const double& min_x, const double& min_y, const double& min_z, const double& max_x, const double& max_y, const double& max_z, const std::string& matrix);
         bool AddGeometry(const int64_t& id, const int64_t& hashcode, int geo_type, const std::vector<uint8_t>& geo_byte);
-        bool AddMesh(const int64_t& id, const int64_t& geo_id, int mesh_tri_count, const double& xmin, const double& ymin, const double& zmin, const double& xmax, const double& ymax, const double& zmax, const std::vector<uint8_t>& mesh);
+        bool AddMeshBuffer(const int64_t& id, const int64_t& geo_id, int mesh_tri_count, const double& xmin, const double& ymin, const double& zmin, const double& xmax, const double& ymax, const double& zmax, const std::vector<uint8_t>& mesh);
         bool AddMesh(const int64_t& id, const int64_t& geo_id, int mesh_tri_count, const double& xmin, const double& ymin, const double& zmin, const double& xmax, const double& ymax, const double& zmax, const std::string& mesh);
         bool UpdateInstanceBoundingBox(const int64_t& instid, const double& min_x, const double& min_y, const double& min_z, const double& max_x, const double& max_y, const double& max_z);
         bool UpdateProjectSettings(const std::map<std::string, std::string>& settings);
