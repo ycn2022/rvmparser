@@ -41,3 +41,4 @@ make/obj
 make/rvmparser
 
 !DataAccess/lib
+/rvmparser-linux/.vs
