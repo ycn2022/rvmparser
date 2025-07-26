@@ -1,4 +1,4 @@
-#include <cassert>
+ï»¿#include <cassert>
 #include "Store.h"
 #include "StudioColorizer.h"
 
@@ -6,10 +6,10 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <cstdlib>  // ÓÃÓÚ strtol 
-#include <cctype>   // ÓÃÓÚÊ®Áù½øÖÆÑéÖ¤ 
+#include <cstdlib>  // ç”¨äº strtol 
+#include <cctype>   // ç”¨äºåå…­è¿›åˆ¶éªŒè¯ 
 #include <vector>
-#include <iomanip>  // ÓÃÓÚÊä³ö¸ñÊ½ 
+#include <iomanip>  // ç”¨äºè¾“å‡ºæ ¼å¼ 
 #include <algorithm>
 
 #include "windows.h"
@@ -24,27 +24,27 @@ StudioColorizer::StudioColorizer(Logger logger, const char* colorAttribute) :Col
 }
 
 
-// ×ª´óĞ´ 
+// è½¬å¤§å†™ 
 std::string to_upper(const std::string& s) {
 	std::string result = s;
 	std::transform(result.begin(), result.end(), result.begin(), ::toupper);
 	return result;
 }
 
-// ×ªĞ¡Ğ´ 
+// è½¬å°å†™ 
 std::string to_lower(const std::string& s) {
 	std::string result = s;
 	std::transform(result.begin(), result.end(), result.begin(), ::tolower);
 	return result;
 }
 
-// ĞÂÔö£º×Ö·û´® trim º¯Êı
+// æ–°å¢ï¼šå­—ç¬¦ä¸² trim å‡½æ•°
 std::string trim(const std::string& str) {
-	// ²éÕÒµÚÒ»¸ö·Ç¿Õ°××Ö·ûÎ»ÖÃ
+	// æŸ¥æ‰¾ç¬¬ä¸€ä¸ªéç©ºç™½å­—ç¬¦ä½ç½®
 	auto start = std::find_if_not(str.begin(), str.end(), [](unsigned char ch) {
 		return std::isspace(ch);
 		});
-	// ²éÕÒ×îºóÒ»¸ö·Ç¿Õ°××Ö·ûÎ»ÖÃ 
+	// æŸ¥æ‰¾æœ€åä¸€ä¸ªéç©ºç™½å­—ç¬¦ä½ç½® 
 	auto end = std::find_if_not(str.rbegin(), str.rend(), [](unsigned char ch) {
 		return std::isspace(ch);
 		}).base();
@@ -59,26 +59,26 @@ std::filesystem::path GetExecutablePath() {
 	char buffer[PATH_MAX];
 	readlink("/proc/self/exe", buffer, sizeof(buffer));
 #endif
-	return std::filesystem::path(buffer).parent_path(); // Ö±½Ó»ñÈ¡Ä¿Â¼
+	return std::filesystem::path(buffer).parent_path(); // ç›´æ¥è·å–ç›®å½•
 }
 
 void StudioColorizer::init(Store& store)
 {
 	Colorizer::init(store);
 
-	fs::path exe_dir = GetExecutablePath(); // ¼ÙÉè·µ»ØÀàĞÍÊÇfs::path 
-	fs::path full_path = exe_dir / "rvmcolorindex.txt";  // Ê¹ÓÃoperator/×Ô¶¯´¦Àí·Ö¸ô·û
+	fs::path exe_dir = GetExecutablePath(); // å‡è®¾è¿”å›ç±»å‹æ˜¯fs::path 
+	fs::path full_path = exe_dir / "rvmcolorindex.txt";  // ä½¿ç”¨operator/è‡ªåŠ¨å¤„ç†åˆ†éš”ç¬¦
 	//auto rvmcolorindex = GetExecutablePath().append("rvmcolorindex.txt");
 
 	std::ifstream file(full_path);
 	if (!file.is_open()) {
-		std::cerr << "´íÎó£ºÎŞ·¨´ò¿ªÎÄ¼ş" << "rvmcolorindex.txt" << std::endl;
+		std::cerr << "é”™è¯¯ï¼šæ— æ³•æ‰“å¼€æ–‡ä»¶" << "rvmcolorindex.txt" << std::endl;
 		return;
 	}
 
 	std::string line;
 	while (std::getline(file, line)) {
-		// 2. ½âÎö¶ººÅ·Ö¸ôµÄÈı¸ö×Ö¶Î 
+		// 2. è§£æé€—å·åˆ†éš”çš„ä¸‰ä¸ªå­—æ®µ 
 		std::istringstream iss(line);
 		std::string indexStr, colorName, hexCode;
 
@@ -86,45 +86,45 @@ void StudioColorizer::init(Store& store)
 			!std::getline(iss, colorName, ',') ||
 			!std::getline(iss, hexCode))
 		{
-			std::cerr << "¸ñÊ½´íÎó: " << line << std::endl;
+			std::cerr << "æ ¼å¼é”™è¯¯: " << line << std::endl;
 			continue;
 		}
 
-		// ĞÂÔö£ºTRIM ´¦Àí£¨ºËĞÄ¸Ä½ø£©[8]()[9]()
+		// æ–°å¢ï¼šTRIM å¤„ç†ï¼ˆæ ¸å¿ƒæ”¹è¿›ï¼‰[8]()[9]()
 		indexStr = trim(indexStr);
 		colorName = trim(colorName);
 		hexCode = trim(hexCode);
 
 
-		// 3. ×ª»»Ë÷ÒıÎªÕûÊı 
+		// 3. è½¬æ¢ç´¢å¼•ä¸ºæ•´æ•° 
 		int index;
 		try {
 			index = std::stoi(indexStr);
 		}
 		catch (...) {
-			std::cerr << "ÎŞĞ§Ë÷Òı: " << indexStr << std::endl;
+			std::cerr << "æ— æ•ˆç´¢å¼•: " << indexStr << std::endl;
 			continue;
 		}
 
-		// 4. ÑéÖ¤²¢×ª»»Ê®Áù½øÖÆRGBÖµ 
-		// ¼ì²é¸ñÊ½ÊÇ·ñÒÔ#¿ªÍ·ÇÒ³¤¶ÈÎª7 
+		// 4. éªŒè¯å¹¶è½¬æ¢åå…­è¿›åˆ¶RGBå€¼ 
+		// æ£€æŸ¥æ ¼å¼æ˜¯å¦ä»¥#å¼€å¤´ä¸”é•¿åº¦ä¸º7 
 		if (hexCode.empty() || hexCode[0] != '#' || hexCode.size() != 7) {
-			std::cerr << "ÎŞĞ§HEX¸ñÊ½: " << hexCode << std::endl;
+			std::cerr << "æ— æ•ˆHEXæ ¼å¼: " << hexCode << std::endl;
 			continue;
 		}
 
-		// ÌáÈ¡#ºóÃæµÄ²¿·Ö£¨6Î»Ê®Áù½øÖÆ£©
+		// æå–#åé¢çš„éƒ¨åˆ†ï¼ˆ6ä½åå…­è¿›åˆ¶ï¼‰
 		std::string hexDigits = hexCode.substr(1);
 		char* endPtr;
 		uint64_t rgb = std::strtoul(hexDigits.c_str(), &endPtr, 16);
 
-		// ÑéÖ¤×ª»»½á¹û 
+		// éªŒè¯è½¬æ¢ç»“æœ 
 		if (endPtr != hexDigits.c_str() + hexDigits.size()) {
-			std::cerr << "HEX×ª»»Ê§°Ü: " << hexDigits << std::endl;
+			std::cerr << "HEXè½¬æ¢å¤±è´¥: " << hexDigits << std::endl;
 			continue;
 		}
 
-		// 5. ´æ´¢½âÎö½á¹û 
+		// 5. å­˜å‚¨è§£æç»“æœ 
 		std::string colorNameUpper = to_upper(colorName);
 		std::string colorNameLower = to_lower(colorName);
 		colorNameByMaterialId.insert(index, uint64_t(store.strings.intern(colorName.c_str())));
